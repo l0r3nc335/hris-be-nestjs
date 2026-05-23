@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String     @id @default(uuid())
+  name      String
+  slug      String     @unique
+  status    String     @default("active")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  users     User[]
+  hrRecords HrRecord[]
+  auditLogs AuditLog[]
+}
+
+model User {
+  id            String         @id @default(uuid())
+  tenantId      String
+  email         String
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          String         @default("user")
+  isActive      Boolean        @default(true)
+  emailVerified Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  userRoles     UserRole[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  tenantId        String
+  name            String
+  slug            String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([tenantId, slug])
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  code            String           @unique
+  description     String?
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  actorId    String?
+  action     String
+  entity     String
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([entity, entityId])
+  @@index([actorId])
+}
+
+model HrRecord {
+  id         String   @id @default(uuid())
+  tenantId   String
+  entityType String
+  name       String
+  status     String   @default("active")
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityType])
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  tenantId     String
+  employeeId   String?
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([employeeId])
+}
