@@ -52,7 +52,7 @@ describe('HRIS API (e2e)', () => {
       .post('/api/v1/auth/login')
       .send({ email: 'admin@hris.com', password: 'password' });
 
-    if (res.status === 200) {
+    if ([200, 201].includes(res.status)) {
       expect(res.body.data).toHaveProperty('tokens');
       expect(res.body.data).toHaveProperty('user');
       const token = res.body.data.tokens.accessToken;
