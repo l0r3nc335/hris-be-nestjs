@@ -8,7 +8,7 @@ import { PayrollProcessor } from './processors/payroll.processor';
 import { ExportsProcessor } from './processors/exports.processor';
 
 const queueMock = {
-  add: async () => ({ id: 'test-job' }),
+  add: () => Promise.resolve({ id: 'test-job' }),
 };
 
 const isTestEnv = process.env.NODE_ENV === 'test';
