@@ -11,6 +11,6 @@ export class EmailProcessor extends WorkerHost {
     this.logger.log(
       `Email job ${job.id}: ${job.data.subject} -> ${job.data.to}`,
     );
-    return { sent: true };
+    return Promise.resolve({ sent: true });
   }
 }

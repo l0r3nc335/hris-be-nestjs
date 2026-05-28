@@ -9,6 +9,6 @@ export class ExportsProcessor extends WorkerHost {
 
   process(job: Job<{ tenantId: string; reportType: string }>) {
     this.logger.log(`Export job ${job.id}: ${job.data.reportType}`);
-    return { url: `/exports/${job.id}.csv` };
+    return Promise.resolve({ url: `/exports/${job.id}.csv` });
   }
 }

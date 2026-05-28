@@ -11,6 +11,6 @@ export class PayrollProcessor extends WorkerHost {
     this.logger.log(
       `Payroll run job ${job.id} for tenant ${job.data.tenantId}`,
     );
-    return { status: 'completed', period: job.data.period };
+    return Promise.resolve({ status: 'completed', period: job.data.period });
   }
 }
