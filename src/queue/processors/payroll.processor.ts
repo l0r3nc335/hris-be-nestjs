@@ -7,7 +7,7 @@ import { QUEUE_PAYROLL } from '../queue.constants';
 export class PayrollProcessor extends WorkerHost {
   private readonly logger = new Logger(PayrollProcessor.name);
 
-  async process(job: Job<{ tenantId: string; period: string }>) {
+  process(job: Job<{ tenantId: string; period: string }>) {
     this.logger.log(
       `Payroll run job ${job.id} for tenant ${job.data.tenantId}`,
     );
