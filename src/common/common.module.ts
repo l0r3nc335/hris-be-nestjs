@@ -1,9 +1,9 @@
 import { Global, Module } from '@nestjs/common';
-import { HrRecordsService } from './services/hr-records.service';
+import { EntityNotFoundHelper } from './helpers/entity-not-found.helper';
 
 @Global()
 @Module({
-  providers: [HrRecordsService],
-  exports: [HrRecordsService],
+  providers: [EntityNotFoundHelper],
+  exports: [EntityNotFoundHelper],
 })
 export class CommonModule {}

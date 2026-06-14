@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { mapAuditLog } from '../../common/mappers/domain.mappers';
+import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly helpers: EntityNotFoundHelper,
+  ) {}
 
   async log(data: {
     tenantId: string;
@@ -30,29 +36,36 @@ export class AuditService {
     });
   }
 
-  async list(tenantId: string) {
-    return this.prisma.auditLog.findMany({
+  async list(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.auditLog.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+    return records.map(mapAuditLog);
   }
 
   async byEntity(tenantId: string, entity: string, entityId: string) {
-    return this.prisma.auditLog.findMany({
+    const records = await this.prisma.auditLog.findMany({
       where: { tenantId, entity, entityId },
       orderBy: { createdAt: 'desc' },
     });
+    return records.map(mapAuditLog);
   }
 
   async byUser(tenantId: string, userId: string) {
-    return this.prisma.auditLog.findMany({
+    const records = await this.prisma.auditLog.findMany({
       where: { tenantId, actorId: userId },
       orderBy: { createdAt: 'desc' },
     });
+    return records.map(mapAuditLog);
   }
 
-  async getById(tenantId: string, id: string) {
-    return this.prisma.auditLog.findFirst({ where: { id, tenantId } });
+  async getById(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.auditLog.findFirst({
+      where: { id, tenantId },
+    });
+    if (!record) this.helpers.throwNotFound('AuditLog');
+    return mapAuditLog(record);
   }
 }

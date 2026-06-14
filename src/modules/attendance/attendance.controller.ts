@@ -22,6 +22,7 @@ export class AttendanceController {
   constructor(private readonly service: AttendanceService) {}
 
   @Post('check-in')
+  @Permissions('employees:write')
   checkIn(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -30,6 +31,7 @@ export class AttendanceController {
   }
 
   @Post('check-out')
+  @Permissions('employees:write')
   checkOut(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -64,6 +66,23 @@ export class AttendanceController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get(':employeeId')
   byEmployee(
     @CurrentUser() user: RequestUser,
@@ -78,6 +97,7 @@ export class AttendanceController {
   }
 
   @Post()
+  @Permissions('employees:write')
   create(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -87,6 +107,7 @@ export class AttendanceController {
 
   @Put(':id')
   @Patch(':id')
+  @Permissions('employees:write')
   update(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -96,6 +117,7 @@ export class AttendanceController {
   }
 
   @Delete(':id')
+  @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.remove(user.tenantId, id);
   }

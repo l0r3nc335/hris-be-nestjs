@@ -1,0 +1,45 @@
+-- Add soft-delete column to mutable domain models
+ALTER TABLE "Tenant" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Role" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Department" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Position" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Employee" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "AttendanceRecord" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "LeaveType" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "LeaveRequest" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "PayrollRecord" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "CompensationRecord" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "SalaryStructure" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "TimeLog" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "JobPosting" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Applicant" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Interview" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "PerformanceReview" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Notification" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "CompanySetting" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "BillingInvoice" ADD COLUMN "deletedAt" TIMESTAMP(3);
+ALTER TABLE "Document" ADD COLUMN "deletedAt" TIMESTAMP(3);
+
+-- Indexes for active/trashed list queries
+CREATE INDEX "Tenant_deletedAt_idx" ON "Tenant"("deletedAt");
+CREATE INDEX "User_tenantId_deletedAt_idx" ON "User"("tenantId", "deletedAt");
+CREATE INDEX "Role_tenantId_deletedAt_idx" ON "Role"("tenantId", "deletedAt");
+CREATE INDEX "Department_tenantId_deletedAt_idx" ON "Department"("tenantId", "deletedAt");
+CREATE INDEX "Position_tenantId_deletedAt_idx" ON "Position"("tenantId", "deletedAt");
+CREATE INDEX "Employee_tenantId_deletedAt_idx" ON "Employee"("tenantId", "deletedAt");
+CREATE INDEX "AttendanceRecord_tenantId_deletedAt_idx" ON "AttendanceRecord"("tenantId", "deletedAt");
+CREATE INDEX "LeaveType_tenantId_deletedAt_idx" ON "LeaveType"("tenantId", "deletedAt");
+CREATE INDEX "LeaveRequest_tenantId_deletedAt_idx" ON "LeaveRequest"("tenantId", "deletedAt");
+CREATE INDEX "PayrollRecord_tenantId_deletedAt_idx" ON "PayrollRecord"("tenantId", "deletedAt");
+CREATE INDEX "CompensationRecord_tenantId_deletedAt_idx" ON "CompensationRecord"("tenantId", "deletedAt");
+CREATE INDEX "SalaryStructure_tenantId_deletedAt_idx" ON "SalaryStructure"("tenantId", "deletedAt");
+CREATE INDEX "TimeLog_tenantId_deletedAt_idx" ON "TimeLog"("tenantId", "deletedAt");
+CREATE INDEX "JobPosting_tenantId_deletedAt_idx" ON "JobPosting"("tenantId", "deletedAt");
+CREATE INDEX "Applicant_tenantId_deletedAt_idx" ON "Applicant"("tenantId", "deletedAt");
+CREATE INDEX "Interview_tenantId_deletedAt_idx" ON "Interview"("tenantId", "deletedAt");
+CREATE INDEX "PerformanceReview_tenantId_deletedAt_idx" ON "PerformanceReview"("tenantId", "deletedAt");
+CREATE INDEX "Notification_tenantId_deletedAt_idx" ON "Notification"("tenantId", "deletedAt");
+CREATE INDEX "CompanySetting_tenantId_deletedAt_idx" ON "CompanySetting"("tenantId", "deletedAt");
+CREATE INDEX "BillingInvoice_tenantId_deletedAt_idx" ON "BillingInvoice"("tenantId", "deletedAt");
+CREATE INDEX "Document_tenantId_deletedAt_idx" ON "Document"("tenantId", "deletedAt");

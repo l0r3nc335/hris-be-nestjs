@@ -51,6 +51,23 @@ export class EmployeesController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get(':id/employment-history')
   employmentHistory(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.employmentHistory(user.tenantId, id);
@@ -108,6 +125,12 @@ export class EmployeesController {
     @Body() body: Record<string, string>,
   ) {
     return this.service.update(user.tenantId, id, body);
+  }
+
+  @Patch(':id/deactivate')
+  @Permissions('employees:write')
+  deactivate(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.deactivate(user.tenantId, id);
   }
 
   @Delete(':id')

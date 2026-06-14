@@ -1,41 +1,102 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { HrRecordsService } from '../../common/services/hr-records.service';
+import { mapRole } from '../../common/mappers/domain.mappers';
+import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
+import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import {
+  restoreData,
+  softDeleteData,
+  tenantActiveWhere,
+  tenantTrashedWhere,
+} from '../../common/services/soft-delete-crud.helper';
 
 @Injectable()
 export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly hr: HrRecordsService,
+    private readonly helpers: EntityNotFoundHelper,
   ) {}
 
-  list(tenantId: string) {
-    return this.prisma.role.findMany({ where: { tenantId } });
+  private async findOrThrow(tenantId: string, id: string) {
+    const record = await this.prisma.role.findFirst({
+      where: { id, tenantId },
+    });
+    if (!record) this.helpers.throwNotFound('Role');
+    return record;
   }
 
-  get(tenantId: string, id: string) {
-    return this.prisma.role.findFirst({ where: { id, tenantId } });
+  async list(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.role.findMany({
+      where: tenantActiveWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapRole);
   }
 
-  create(tenantId: string, body: { name: string; slug?: string }) {
-    return this.prisma.role.create({
+  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.role.findMany({
+      where: tenantTrashedWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapRole);
+  }
+
+  async get(tenantId: string, id: string): Promise<ListEntityDto> {
+    return mapRole(await this.findOrThrow(tenantId, id));
+  }
+
+  async create(
+    tenantId: string,
+    body: { name: string; slug?: string },
+  ): Promise<ListEntityDto> {
+    const record = await this.prisma.role.create({
       data: {
         tenantId,
         name: body.name,
         slug: body.slug ?? body.name.toLowerCase().replace(/\s+/g, '-'),
       },
     });
+    return mapRole(record);
   }
 
-  update(tenantId: string, id: string, body: { name?: string }) {
-    return this.prisma.role.update({
+  async update(
+    tenantId: string,
+    id: string,
+    body: { name?: string },
+  ): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.role.update({
       where: { id },
       data: { name: body.name },
     });
+    return mapRole(updated);
   }
 
-  remove(tenantId: string, id: string) {
-    return this.prisma.role.deleteMany({ where: { id, tenantId } });
+  async softDelete(tenantId: string, id: string): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.role.update({
+      where: { id },
+      data: softDeleteData(),
+    });
+    return mapRole(updated);
+  }
+
+  async restore(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.role.findFirst({
+      where: { id, ...tenantTrashedWhere(tenantId) },
+    });
+    if (!record) this.helpers.throwNotFound('Role');
+    const updated = await this.prisma.role.update({
+      where: { id },
+      data: restoreData(),
+    });
+    return mapRole(updated);
+  }
+
+  async remove(tenantId: string, id: string) {
+    await this.findOrThrow(tenantId, id);
+    await this.prisma.role.delete({ where: { id } });
+    return { id, deleted: true };
   }
 
   listPermissions() {

@@ -25,12 +25,30 @@ export class RecruitmentController {
     return this.service.listJobs(user.tenantId);
   }
 
+  @Get('jobs/trashed')
+  listTrashedJobs(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashedJobs(user.tenantId);
+  }
+
   @Post('jobs')
+  @Permissions('employees:write')
   createJob(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
     return this.service.createJob(user.tenantId, body);
+  }
+
+  @Patch('jobs/:id/soft-delete')
+  @Permissions('employees:write')
+  softDeleteJob(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDeleteJob(user.tenantId, id);
+  }
+
+  @Patch('jobs/:id/restore')
+  @Permissions('employees:write')
+  restoreJob(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restoreJob(user.tenantId, id);
   }
 
   @Get('jobs/:id')
@@ -40,6 +58,7 @@ export class RecruitmentController {
 
   @Put('jobs/:id')
   @Patch('jobs/:id')
+  @Permissions('employees:write')
   updateJob(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -49,6 +68,7 @@ export class RecruitmentController {
   }
 
   @Delete('jobs/:id')
+  @Permissions('employees:write')
   removeJob(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.removeJob(user.tenantId, id);
   }
@@ -58,7 +78,13 @@ export class RecruitmentController {
     return this.service.listApplicants(user.tenantId);
   }
 
+  @Get('applicants/trashed')
+  listTrashedApplicants(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashedApplicants(user.tenantId);
+  }
+
   @Post('applicants')
+  @Permissions('employees:write')
   createApplicant(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -66,12 +92,48 @@ export class RecruitmentController {
     return this.service.createApplicant(user.tenantId, body);
   }
 
+  @Patch('applicants/:id/soft-delete')
+  @Permissions('employees:write')
+  softDeleteApplicant(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ) {
+    return this.service.softDeleteApplicant(user.tenantId, id);
+  }
+
+  @Patch('applicants/:id/restore')
+  @Permissions('employees:write')
+  restoreApplicant(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ) {
+    return this.service.restoreApplicant(user.tenantId, id);
+  }
+
   @Get('applicants/:id')
   getApplicant(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.getApplicant(user.tenantId, id);
   }
 
+  @Put('applicants/:id')
+  @Patch('applicants/:id')
+  @Permissions('employees:write')
+  updateApplicant(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() body: Record<string, string>,
+  ) {
+    return this.service.updateApplicant(user.tenantId, id, body);
+  }
+
+  @Delete('applicants/:id')
+  @Permissions('employees:write')
+  removeApplicant(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.removeApplicant(user.tenantId, id);
+  }
+
   @Post('applicants/:id/schedule-interview')
+  @Permissions('employees:write')
   scheduleInterview(
     @Param('id') id: string,
     @Body() body: Record<string, string>,
@@ -80,11 +142,13 @@ export class RecruitmentController {
   }
 
   @Post('applicants/:id/hire')
+  @Permissions('employees:write')
   hire(@Param('id') id: string) {
     return this.service.hire(id);
   }
 
   @Post('applicants/:id/reject')
+  @Permissions('employees:write')
   reject(@Param('id') id: string) {
     return this.service.reject(id);
   }

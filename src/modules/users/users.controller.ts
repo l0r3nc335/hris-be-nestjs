@@ -41,6 +41,23 @@ export class UsersController {
     return this.service.inactive(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('users:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('users:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get(':id/profile')
   profile(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.getProfile(user.tenantId, id);

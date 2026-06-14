@@ -51,6 +51,23 @@ export class LeaveController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Patch(':id/approve')
   @Permissions('leave:approve')
   approve(@CurrentUser() user: RequestUser, @Param('id') id: string) {
@@ -74,6 +91,7 @@ export class LeaveController {
   }
 
   @Post()
+  @Permissions('employees:write')
   create(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -83,6 +101,7 @@ export class LeaveController {
 
   @Put(':id')
   @Patch(':id')
+  @Permissions('employees:write')
   update(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -92,6 +111,7 @@ export class LeaveController {
   }
 
   @Delete(':id')
+  @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.remove(user.tenantId, id);
   }

@@ -21,6 +21,7 @@ export class TimeTrackingController {
   constructor(private readonly service: TimeTrackingService) {}
 
   @Post('start')
+  @Permissions('employees:write')
   start(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -29,6 +30,7 @@ export class TimeTrackingController {
   }
 
   @Post('stop')
+  @Permissions('employees:write')
   stop(@CurrentUser() user: RequestUser, @Body() body: Record<string, string>) {
     return this.service.stop(user.tenantId, body);
   }
@@ -41,6 +43,23 @@ export class TimeTrackingController {
   @Get()
   list(@CurrentUser() user: RequestUser) {
     return this.service.list(user.tenantId);
+  }
+
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
   }
 
   @Get(':employeeId')
@@ -57,6 +76,7 @@ export class TimeTrackingController {
   }
 
   @Post()
+  @Permissions('employees:write')
   create(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -66,6 +86,7 @@ export class TimeTrackingController {
 
   @Put(':id')
   @Patch(':id')
+  @Permissions('employees:write')
   update(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -75,6 +96,7 @@ export class TimeTrackingController {
   }
 
   @Delete(':id')
+  @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.remove(user.tenantId, id);
   }

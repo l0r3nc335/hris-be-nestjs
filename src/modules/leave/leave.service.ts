@@ -1,63 +1,166 @@
 import { Injectable } from '@nestjs/common';
-import { HrRecordsService } from '../../common/services/hr-records.service';
-
-const ENTITY = 'leaves';
+import { PrismaService } from '../../database/prisma.service';
+import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { mapLeaveRequest, mapLeaveType } from '../../common/mappers/domain.mappers';
+import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
+import {
+  restoreData,
+  softDeleteData,
+  tenantActiveWhere,
+  tenantTrashedWhere,
+} from '../../common/services/soft-delete-crud.helper';
 
 @Injectable()
 export class LeaveService {
-  constructor(private readonly hr: HrRecordsService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly helpers: EntityNotFoundHelper,
+  ) {}
 
-  list(tenantId: string) {
-    return this.hr.list(tenantId, ENTITY);
+  private async findOrThrow(tenantId: string, id: string) {
+    const record = await this.prisma.leaveRequest.findFirst({
+      where: { id, tenantId },
+      include: { leaveType: true },
+    });
+    if (!record) this.helpers.throwNotFound('Leave');
+    return record;
   }
-  get(tenantId: string, id: string) {
-    return this.hr.getById(tenantId, ENTITY, id);
+
+  async list(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.leaveRequest.findMany({
+      where: tenantActiveWhere(tenantId),
+      include: { leaveType: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapLeaveRequest);
   }
-  pending(tenantId: string) {
-    return this.hr
-      .list(tenantId, ENTITY)
-      .then((items) => items.map((i) => ({ ...i, status: 'pending' })));
+
+  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.leaveRequest.findMany({
+      where: tenantTrashedWhere(tenantId),
+      include: { leaveType: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapLeaveRequest);
   }
-  balance(_tenantId: string, employeeId: string) {
-    return { employeeId, annual: 15, used: 3, remaining: 12 };
+
+  async get(tenantId: string, id: string): Promise<ListEntityDto> {
+    return mapLeaveRequest(await this.findOrThrow(tenantId, id));
   }
-  history(tenantId: string, employeeId: string) {
-    return this.hr
-      .list(tenantId, ENTITY)
-      .then((items) => items.map((i) => ({ ...i, employeeId })));
+
+  async pending(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.leaveRequest.findMany({
+      where: { ...tenantActiveWhere(tenantId), status: 'pending' },
+      include: { leaveType: true },
+    });
+    return records.map(mapLeaveRequest);
   }
-  apply(tenantId: string, body: Record<string, string>) {
-    return this.hr.createStub(
-      tenantId,
-      ENTITY,
-      body.type ?? 'Leave',
-      'pending',
-    );
+
+  async apply(tenantId: string, body: Record<string, string>) {
+    return this.create(tenantId, body);
   }
-  approve(tenantId: string, id: string) {
+
+  async approve(tenantId: string, id: string) {
     return this.update(tenantId, id, { status: 'approved' });
   }
-  reject(tenantId: string, id: string) {
+
+  async reject(tenantId: string, id: string) {
     return this.update(tenantId, id, { status: 'rejected' });
   }
-  cancel(tenantId: string, id: string) {
+
+  async cancel(tenantId: string, id: string) {
     return this.update(tenantId, id, { status: 'cancelled' });
   }
-  create(tenantId: string, body: { name?: string }) {
-    return this.hr.createStub(tenantId, ENTITY, body.name ?? 'Leave');
+
+  async create(
+    tenantId: string,
+    body: { name?: string; status?: string; employeeId?: string },
+  ): Promise<ListEntityDto> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { tenantId },
+    });
+    const leaveType = await this.prisma.leaveType.findFirst({
+      where: { tenantId },
+    });
+    const record = await this.prisma.leaveRequest.create({
+      data: {
+        tenantId,
+        employeeId: body.employeeId ?? employee?.id ?? '',
+        leaveTypeId: leaveType?.id ?? '',
+        status: body.status ?? 'pending',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 86400000),
+      },
+      include: { leaveType: true },
+    });
+    return mapLeaveRequest(record);
   }
-  update(
+
+  async update(
     tenantId: string,
     id: string,
     body: { name?: string; status?: string },
-  ) {
-    return this.hr.getById(tenantId, ENTITY, id).then((e) => ({
-      ...e,
-      name: body.name ?? e.name,
-      status: body.status ?? e.status,
-    }));
+  ): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.leaveRequest.update({
+      where: { id },
+      data: { status: body.status },
+      include: { leaveType: true },
+    });
+    return mapLeaveRequest(updated);
   }
-  remove(_tenantId: string, id: string) {
+
+  async balance(tenantId: string, employeeId: string) {
+    void tenantId;
+    const count = await this.prisma.leaveRequest.count({
+      where: { employeeId, status: 'approved' },
+    });
+    return { employeeId, balance: Math.max(0, 20 - count * 2) };
+  }
+
+  async history(tenantId: string, employeeId: string) {
+    const records = await this.prisma.leaveRequest.findMany({
+      where: { ...tenantActiveWhere(tenantId), employeeId },
+      include: { leaveType: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapLeaveRequest);
+  }
+
+  async softDelete(tenantId: string, id: string): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.leaveRequest.update({
+      where: { id },
+      data: softDeleteData(),
+      include: { leaveType: true },
+    });
+    return mapLeaveRequest(updated);
+  }
+
+  async restore(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.leaveRequest.findFirst({
+      where: { id, ...tenantTrashedWhere(tenantId) },
+      include: { leaveType: true },
+    });
+    if (!record) this.helpers.throwNotFound('Leave');
+    const updated = await this.prisma.leaveRequest.update({
+      where: { id },
+      data: restoreData(),
+      include: { leaveType: true },
+    });
+    return mapLeaveRequest(updated);
+  }
+
+  async remove(tenantId: string, id: string) {
+    await this.findOrThrow(tenantId, id);
+    await this.prisma.leaveRequest.delete({ where: { id } });
     return { id, deleted: true };
+  }
+
+  async listLeaveTypes(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.leaveType.findMany({
+      where: tenantActiveWhere(tenantId),
+    });
+    return records.map(mapLeaveType);
   }
 }

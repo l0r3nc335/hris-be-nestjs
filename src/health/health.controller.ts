@@ -24,6 +24,55 @@ export class HealthController {
   ) {}
 
   @Public()
+  @Get('system/health-summary')
+  async healthSummary() {
+    const now = new Date().toISOString();
+    let dbStatus = 'up';
+    let redisStatus = 'down';
+
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      dbStatus = 'down';
+    }
+
+    try {
+      const pong = await this.redis.ping();
+      redisStatus = pong === 'PONG' ? 'up' : 'degraded';
+    } catch {
+      redisStatus = 'down';
+    }
+
+    const tenantId = 'system';
+    return [
+      {
+        id: 'database',
+        tenantId,
+        name: 'Database',
+        status: dbStatus,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'redis',
+        tenantId,
+        name: 'Redis Cache',
+        status: redisStatus,
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: 'api',
+        tenantId,
+        name: 'API Server',
+        status: 'up',
+        createdAt: now,
+        updatedAt: now,
+      },
+    ];
+  }
+
+  @Public()
   @Get('health')
   @HealthCheck()
   check() {

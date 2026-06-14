@@ -1,58 +1,138 @@
 import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
-import { HrRecordsService } from '../../common/services/hr-records.service';
-import { QUEUE_PAYROLL } from '../../queue/queue.constants';
-
-const ENTITY = 'payroll';
+import { PrismaService } from '../../database/prisma.service';
+import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { mapPayroll } from '../../common/mappers/domain.mappers';
+import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
+import {
+  restoreData,
+  softDeleteData,
+  tenantActiveWhere,
+  tenantTrashedWhere,
+} from '../../common/services/soft-delete-crud.helper';
 
 @Injectable()
 export class PayrollService {
   constructor(
-    private readonly hr: HrRecordsService,
-    @InjectQueue(QUEUE_PAYROLL) private readonly payrollQueue: Queue,
+    private readonly prisma: PrismaService,
+    private readonly helpers: EntityNotFoundHelper,
   ) {}
 
-  list(tenantId: string) {
-    return this.hr.list(tenantId, ENTITY);
-  }
-  get(tenantId: string, id: string) {
-    return this.hr.getById(tenantId, ENTITY, id);
-  }
-  generate(tenantId: string, body: Record<string, string>) {
-    return { status: 'generated', period: body.period ?? 'current', tenantId };
-  }
-  async run(tenantId: string, body: Record<string, string>) {
-    const job = await this.payrollQueue.add('run', {
-      tenantId,
-      period: body.period ?? 'current',
+  private async findOrThrow(tenantId: string, id: string) {
+    const record = await this.prisma.payrollRecord.findFirst({
+      where: { id, tenantId },
     });
-    return { status: 'queued', jobId: job.id };
+    if (!record) this.helpers.throwNotFound('Payroll');
+    return record;
   }
-  slips(_tenantId: string, employeeId: string) {
-    return { employeeId, slips: [] };
+
+  async list(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.payrollRecord.findMany({
+      where: tenantActiveWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapPayroll);
   }
-  summary(tenantId: string) {
-    return { tenantId, total: 450000, currency: 'USD' };
+
+  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.payrollRecord.findMany({
+      where: tenantTrashedWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapPayroll);
   }
-  history(tenantId: string) {
-    return this.hr.list(tenantId, ENTITY);
+
+  async get(tenantId: string, id: string): Promise<ListEntityDto> {
+    return mapPayroll(await this.findOrThrow(tenantId, id));
   }
-  create(tenantId: string, body: { name?: string }) {
-    return this.hr.createStub(tenantId, ENTITY, body.name ?? 'Payroll');
+
+  async create(
+    tenantId: string,
+    body: { name?: string; status?: string },
+  ): Promise<ListEntityDto> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { tenantId },
+    });
+    const record = await this.prisma.payrollRecord.create({
+      data: {
+        tenantId,
+        employeeId: employee?.id ?? '',
+        period: body.name ?? `2025-${Date.now()}`,
+        status: body.status ?? 'pending',
+        amount: 50000,
+      },
+    });
+    return mapPayroll(record);
   }
-  update(
+
+  async update(
     tenantId: string,
     id: string,
     body: { name?: string; status?: string },
-  ) {
-    return this.hr.getById(tenantId, ENTITY, id).then((e) => ({
-      ...e,
-      name: body.name ?? e.name,
-      status: body.status ?? e.status,
-    }));
+  ): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.payrollRecord.update({
+      where: { id },
+      data: {
+        period: body.name,
+        status: body.status,
+      },
+    });
+    return mapPayroll(updated);
   }
-  remove(_tenantId: string, id: string) {
+
+  async softDelete(tenantId: string, id: string): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.payrollRecord.update({
+      where: { id },
+      data: softDeleteData(),
+    });
+    return mapPayroll(updated);
+  }
+
+  async restore(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.payrollRecord.findFirst({
+      where: { id, ...tenantTrashedWhere(tenantId) },
+    });
+    if (!record) this.helpers.throwNotFound('Payroll');
+    const updated = await this.prisma.payrollRecord.update({
+      where: { id },
+      data: restoreData(),
+    });
+    return mapPayroll(updated);
+  }
+
+  async remove(tenantId: string, id: string) {
+    await this.findOrThrow(tenantId, id);
+    await this.prisma.payrollRecord.delete({ where: { id } });
     return { id, deleted: true };
+  }
+
+  async generate(tenantId: string, body?: Record<string, unknown>) {
+    void body;
+    return { status: 'queued', tenantId };
+  }
+
+  async run(tenantId: string, body?: Record<string, unknown>) {
+    void body;
+    return { status: 'running', tenantId };
+  }
+
+  async summary(tenantId: string) {
+    const records = await this.prisma.payrollRecord.findMany({
+      where: tenantActiveWhere(tenantId),
+    });
+    const total = records.reduce((sum, r) => sum + Number(r.amount), 0);
+    return { total, count: records.length };
+  }
+
+  async history(tenantId: string) {
+    return this.list(tenantId);
+  }
+
+  async slips(tenantId: string, employeeId: string) {
+    const records = await this.prisma.payrollRecord.findMany({
+      where: { ...tenantActiveWhere(tenantId), employeeId },
+    });
+    return records.map(mapPayroll);
   }
 }

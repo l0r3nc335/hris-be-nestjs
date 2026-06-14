@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CompensationService } from './compensation.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -16,12 +16,42 @@ export class CompensationController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('compensation/trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Post('compensation')
+  @Permissions('payroll:run')
+  create(
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, string>,
+  ) {
+    return this.service.create(user.tenantId, body);
+  }
+
+  @Patch('compensation/:id/soft-delete')
+  @Permissions('payroll:run')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch('compensation/:id/restore')
+  @Permissions('payroll:run')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get('compensation/:employeeId')
-  byEmployee(@Param('employeeId') employeeId: string) {
-    return this.service.byEmployee('', employeeId);
+  byEmployee(
+    @CurrentUser() user: RequestUser,
+    @Param('employeeId') employeeId: string,
+  ) {
+    return this.service.byEmployee(user.tenantId, employeeId);
   }
 
   @Put('compensation/:employeeId')
+  @Permissions('payroll:run')
   updateCompensation(
     @CurrentUser() user: RequestUser,
     @Param('employeeId') employeeId: string,
@@ -32,6 +62,7 @@ export class CompensationController {
   }
 
   @Post('compensation/:employeeId/adjust')
+  @Permissions('payroll:run')
   adjust(
     @CurrentUser() user: RequestUser,
     @Param('employeeId') employeeId: string,
@@ -40,16 +71,68 @@ export class CompensationController {
     return this.service.adjust(user.tenantId, employeeId, body);
   }
 
+  @Delete('compensation/:id')
+  @Permissions('payroll:run')
+  remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.removeById(user.tenantId, id);
+  }
+
   @Get('salary-structures')
   salaryStructures(@CurrentUser() user: RequestUser) {
     return this.service.salaryStructures(user.tenantId);
   }
 
+  @Get('salary-structures/trashed')
+  listTrashedStructures(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashedStructures(user.tenantId);
+  }
+
   @Post('salary-structures')
+  @Permissions('payroll:run')
   createStructure(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
     return this.service.createStructure(user.tenantId, body);
+  }
+
+  @Patch('salary-structures/:id/soft-delete')
+  @Permissions('payroll:run')
+  softDeleteStructure(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ) {
+    return this.service.softDeleteStructure(user.tenantId, id);
+  }
+
+  @Patch('salary-structures/:id/restore')
+  @Permissions('payroll:run')
+  restoreStructure(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+  ) {
+    return this.service.restoreStructure(user.tenantId, id);
+  }
+
+  @Get('salary-structures/:id')
+  getStructure(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.getStructure(user.tenantId, id);
+  }
+
+  @Put('salary-structures/:id')
+  @Patch('salary-structures/:id')
+  @Permissions('payroll:run')
+  updateStructure(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() body: Record<string, string>,
+  ) {
+    return this.service.updateStructure(user.tenantId, id, body);
+  }
+
+  @Delete('salary-structures/:id')
+  @Permissions('payroll:run')
+  removeStructure(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.removeStructure(user.tenantId, id);
   }
 }

@@ -25,6 +25,23 @@ export class PositionsController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('departments:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('departments:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get(':id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.get(user.tenantId, id);

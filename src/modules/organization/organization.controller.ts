@@ -1,4 +1,12 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { OrganizationService } from './organization.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -16,6 +24,23 @@ export class OrganizationController {
     return this.service.chart(user.tenantId);
   }
 
+  @Get('chart/trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch('chart/:id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch('chart/:id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get('reporting-lines')
   reportingLines(@CurrentUser() user: RequestUser) {
     return this.service.reportingLines(user.tenantId);
@@ -29,5 +54,30 @@ export class OrganizationController {
   @Get('chart/:id')
   getNode(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.getChartNode(user.tenantId, id);
+  }
+
+  @Post('chart')
+  @Permissions('employees:write')
+  create(
+    @CurrentUser() user: RequestUser,
+    @Body() body: Record<string, string>,
+  ) {
+    return this.service.create(user.tenantId, body);
+  }
+
+  @Patch('chart/:id')
+  @Permissions('employees:write')
+  update(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() body: Record<string, string>,
+  ) {
+    return this.service.update(user.tenantId, id, body);
+  }
+
+  @Delete('chart/:id')
+  @Permissions('employees:write')
+  remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.remove(user.tenantId, id);
   }
 }

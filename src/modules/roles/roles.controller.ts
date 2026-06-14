@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Put,
 } from '@nestjs/common';
@@ -29,6 +30,11 @@ export class RolesController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('roles/trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
   @Post('roles')
   create(
     @CurrentUser() user: RequestUser,
@@ -48,6 +54,16 @@ export class RolesController {
     @Body() body: { permissionIds: string[] },
   ) {
     return this.service.assignPermissions(id, body.permissionIds);
+  }
+
+  @Patch('roles/:id/soft-delete')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch('roles/:id/restore')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
   }
 
   @Get('roles/:id')

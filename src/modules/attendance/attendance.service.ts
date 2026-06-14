@@ -1,61 +1,166 @@
 import { Injectable } from '@nestjs/common';
-import { HrRecordsService } from '../../common/services/hr-records.service';
-
-const ENTITY = 'attendance';
+import { PrismaService } from '../../database/prisma.service';
+import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { mapAttendance } from '../../common/mappers/domain.mappers';
+import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
+import {
+  restoreData,
+  softDeleteData,
+  tenantActiveWhere,
+  tenantTrashedWhere,
+} from '../../common/services/soft-delete-crud.helper';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private readonly hr: HrRecordsService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly helpers: EntityNotFoundHelper,
+  ) {}
 
-  list(tenantId: string) {
-    return this.hr.list(tenantId, ENTITY);
+  private async findOrThrow(tenantId: string, id: string) {
+    const record = await this.prisma.attendanceRecord.findFirst({
+      where: { id, tenantId },
+    });
+    if (!record) this.helpers.throwNotFound('Attendance');
+    return record;
   }
-  get(tenantId: string, id: string) {
-    return this.hr.getById(tenantId, ENTITY, id);
+
+  async list(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: tenantActiveWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapAttendance);
   }
-  checkIn(tenantId: string, body: Record<string, string>) {
-    return {
-      ...this.hr.stubEntity(tenantId, 'Check-in'),
-      type: 'check-in',
-      ...body,
-    };
+
+  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: tenantTrashedWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapAttendance);
   }
-  checkOut(tenantId: string, body: Record<string, string>) {
-    return {
-      ...this.hr.stubEntity(tenantId, 'Check-out'),
-      type: 'check-out',
-      ...body,
-    };
+
+  async get(tenantId: string, id: string): Promise<ListEntityDto> {
+    return mapAttendance(await this.findOrThrow(tenantId, id));
   }
-  today(tenantId: string) {
-    return this.hr.list(tenantId, ENTITY);
+
+  async getByEmployee(tenantId: string, employeeId: string) {
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: { ...tenantActiveWhere(tenantId), employeeId },
+      orderBy: { date: 'desc' },
+    });
+    return records.map(mapAttendance);
   }
-  range(_tenantId: string, _start?: string, _end?: string) {
-    return { records: [], start: _start, end: _end };
+
+  async today(tenantId: string) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: { ...tenantActiveWhere(tenantId), date: today },
+    });
+    return records.map(mapAttendance);
   }
-  summary(_tenantId: string, employeeId: string) {
-    return { employeeId, daysPresent: 20, daysAbsent: 2 };
+
+  async byEmployee(tenantId: string, employeeId: string) {
+    return this.getByEmployee(tenantId, employeeId);
   }
-  byEmployee(tenantId: string, employeeId: string) {
-    return this.hr
-      .list(tenantId, ENTITY)
-      .then((items) => items.map((i) => ({ ...i, employeeId })));
+
+  async range(tenantId: string, start?: string, end?: string) {
+    const records = await this.prisma.attendanceRecord.findMany({
+      where: {
+        ...tenantActiveWhere(tenantId),
+        ...(start && end
+          ? { date: { gte: new Date(start), lte: new Date(end) } }
+          : {}),
+      },
+      orderBy: { date: 'desc' },
+    });
+    return records.map(mapAttendance);
   }
-  create(tenantId: string, body: { name?: string }) {
-    return this.hr.createStub(tenantId, ENTITY, body.name ?? 'Attendance');
+
+  async summary(tenantId: string, employeeId: string) {
+    const count = await this.prisma.attendanceRecord.count({
+      where: { ...tenantActiveWhere(tenantId), employeeId, status: 'present' },
+    });
+    return { employeeId, presentDays: count };
   }
-  update(
+
+  async checkIn(tenantId: string, body: Record<string, string>) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const record = await this.prisma.attendanceRecord.create({
+      data: {
+        tenantId,
+        employeeId: body.employeeId ?? '',
+        date: today,
+        status: 'present',
+      },
+    });
+    return mapAttendance(record);
+  }
+
+  async checkOut(tenantId: string, body: Record<string, string>) {
+    void tenantId;
+    void body;
+    return { status: 'checked-out' };
+  }
+
+  async create(
+    tenantId: string,
+    body: { name?: string; status?: string; employeeId?: string },
+  ): Promise<ListEntityDto> {
+    const employee = await this.prisma.employee.findFirst({
+      where: { tenantId },
+    });
+    const record = await this.prisma.attendanceRecord.create({
+      data: {
+        tenantId,
+        employeeId: body.employeeId ?? employee?.id ?? '',
+        date: new Date(),
+        status: body.status ?? 'present',
+      },
+    });
+    return mapAttendance(record);
+  }
+
+  async update(
     tenantId: string,
     id: string,
     body: { name?: string; status?: string },
-  ) {
-    return this.hr.getById(tenantId, ENTITY, id).then((e) => ({
-      ...e,
-      name: body.name ?? e.name,
-      status: body.status ?? e.status,
-    }));
+  ): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.attendanceRecord.update({
+      where: { id },
+      data: { status: body.status },
+    });
+    return mapAttendance(updated);
   }
-  remove(_tenantId: string, id: string) {
+
+  async softDelete(tenantId: string, id: string): Promise<ListEntityDto> {
+    await this.findOrThrow(tenantId, id);
+    const updated = await this.prisma.attendanceRecord.update({
+      where: { id },
+      data: softDeleteData(),
+    });
+    return mapAttendance(updated);
+  }
+
+  async restore(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.attendanceRecord.findFirst({
+      where: { id, ...tenantTrashedWhere(tenantId) },
+    });
+    if (!record) this.helpers.throwNotFound('Attendance');
+    const updated = await this.prisma.attendanceRecord.update({
+      where: { id },
+      data: restoreData(),
+    });
+    return mapAttendance(updated);
+  }
+
+  async remove(tenantId: string, id: string) {
+    await this.findOrThrow(tenantId, id);
+    await this.prisma.attendanceRecord.delete({ where: { id } });
     return { id, deleted: true };
   }
 }

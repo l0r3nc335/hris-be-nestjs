@@ -1,54 +1,219 @@
 import { Injectable } from '@nestjs/common';
-import { HrRecordsService } from '../../common/services/hr-records.service';
+import { PrismaService } from '../../database/prisma.service';
+import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { mapApplicant, mapInterview, mapJobPosting } from '../../common/mappers/domain.mappers';
+import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
+import {
+  restoreData,
+  softDeleteData,
+  tenantActiveWhere,
+  tenantTrashedWhere,
+} from '../../common/services/soft-delete-crud.helper';
 
 @Injectable()
 export class RecruitmentService {
-  constructor(private readonly hr: HrRecordsService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly helpers: EntityNotFoundHelper,
+  ) {}
 
-  listJobs(tenantId: string) {
-    return this.hr.list(tenantId, 'recruitment-jobs');
+  private async findJobOrThrow(tenantId: string, id: string) {
+    const record = await this.prisma.jobPosting.findFirst({
+      where: { id, tenantId },
+    });
+    if (!record) this.helpers.throwNotFound('Job');
+    return record;
   }
-  getJob(tenantId: string, id: string) {
-    return this.hr.getById(tenantId, 'recruitment-jobs', id);
+
+  private async findApplicantOrThrow(tenantId: string, id: string) {
+    const record = await this.prisma.applicant.findFirst({
+      where: { id, tenantId },
+    });
+    if (!record) this.helpers.throwNotFound('Applicant');
+    return record;
   }
-  createJob(tenantId: string, body: { name?: string }) {
-    return this.hr.createStub(tenantId, 'recruitment-jobs', body.name ?? 'Job');
+
+  async listJobs(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.jobPosting.findMany({
+      where: tenantActiveWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapJobPosting);
   }
-  updateJob(
+
+  async listTrashedJobs(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.jobPosting.findMany({
+      where: tenantTrashedWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapJobPosting);
+  }
+
+  async getJob(tenantId: string, id: string): Promise<ListEntityDto> {
+    return mapJobPosting(await this.findJobOrThrow(tenantId, id));
+  }
+
+  async createJob(
+    tenantId: string,
+    body: { name?: string; status?: string },
+  ): Promise<ListEntityDto> {
+    const record = await this.prisma.jobPosting.create({
+      data: {
+        tenantId,
+        title: body.name ?? 'Job',
+        status: body.status ?? 'open',
+      },
+    });
+    return mapJobPosting(record);
+  }
+
+  async updateJob(
     tenantId: string,
     id: string,
     body: { name?: string; status?: string },
-  ) {
-    return this.hr.getById(tenantId, 'recruitment-jobs', id).then((e) => ({
-      ...e,
-      name: body.name ?? e.name,
-      status: body.status ?? e.status,
-    }));
+  ): Promise<ListEntityDto> {
+    await this.findJobOrThrow(tenantId, id);
+    const updated = await this.prisma.jobPosting.update({
+      where: { id },
+      data: { title: body.name, status: body.status },
+    });
+    return mapJobPosting(updated);
   }
-  removeJob(_tenantId: string, id: string) {
+
+  async softDeleteJob(tenantId: string, id: string): Promise<ListEntityDto> {
+    await this.findJobOrThrow(tenantId, id);
+    const updated = await this.prisma.jobPosting.update({
+      where: { id },
+      data: softDeleteData(),
+    });
+    return mapJobPosting(updated);
+  }
+
+  async restoreJob(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.jobPosting.findFirst({
+      where: { id, ...tenantTrashedWhere(tenantId) },
+    });
+    if (!record) this.helpers.throwNotFound('Job');
+    const updated = await this.prisma.jobPosting.update({
+      where: { id },
+      data: restoreData(),
+    });
+    return mapJobPosting(updated);
+  }
+
+  async removeJob(tenantId: string, id: string) {
+    await this.findJobOrThrow(tenantId, id);
+    await this.prisma.jobPosting.delete({ where: { id } });
     return { id, deleted: true };
   }
 
-  listApplicants(tenantId: string) {
-    return this.hr.list(tenantId, 'recruitment-applicants');
+  async listApplicants(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.applicant.findMany({
+      where: tenantActiveWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapApplicant);
   }
-  getApplicant(tenantId: string, id: string) {
-    return this.hr.getById(tenantId, 'recruitment-applicants', id);
+
+  async listTrashedApplicants(tenantId: string): Promise<ListEntityDto[]> {
+    const records = await this.prisma.applicant.findMany({
+      where: tenantTrashedWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+    });
+    return records.map(mapApplicant);
   }
-  createApplicant(tenantId: string, body: { name?: string }) {
-    return this.hr.createStub(
-      tenantId,
-      'recruitment-applicants',
-      body.name ?? 'Applicant',
-    );
+
+  async getApplicant(tenantId: string, id: string): Promise<ListEntityDto> {
+    return mapApplicant(await this.findApplicantOrThrow(tenantId, id));
   }
-  scheduleInterview(applicantId: string, body: Record<string, string>) {
-    return { applicantId, interview: body, status: 'scheduled' };
+
+  async createApplicant(
+    tenantId: string,
+    body: { name?: string; jobId?: string; status?: string },
+  ): Promise<ListEntityDto> {
+    const job = await this.prisma.jobPosting.findFirst({ where: { tenantId } });
+    const record = await this.prisma.applicant.create({
+      data: {
+        tenantId,
+        jobId: body.jobId ?? job?.id ?? '',
+        name: body.name ?? 'Applicant',
+        status: body.status ?? 'applied',
+      },
+    });
+    return mapApplicant(record);
   }
-  hire(applicantId: string) {
-    return { applicantId, status: 'hired' };
+
+  async updateApplicant(
+    tenantId: string,
+    id: string,
+    body: { name?: string; status?: string },
+  ): Promise<ListEntityDto> {
+    await this.findApplicantOrThrow(tenantId, id);
+    const updated = await this.prisma.applicant.update({
+      where: { id },
+      data: { name: body.name, status: body.status },
+    });
+    return mapApplicant(updated);
   }
-  reject(applicantId: string) {
-    return { applicantId, status: 'rejected' };
+
+  async softDeleteApplicant(tenantId: string, id: string): Promise<ListEntityDto> {
+    await this.findApplicantOrThrow(tenantId, id);
+    const updated = await this.prisma.applicant.update({
+      where: { id },
+      data: softDeleteData(),
+    });
+    return mapApplicant(updated);
+  }
+
+  async restoreApplicant(tenantId: string, id: string): Promise<ListEntityDto> {
+    const record = await this.prisma.applicant.findFirst({
+      where: { id, ...tenantTrashedWhere(tenantId) },
+    });
+    if (!record) this.helpers.throwNotFound('Applicant');
+    const updated = await this.prisma.applicant.update({
+      where: { id },
+      data: restoreData(),
+    });
+    return mapApplicant(updated);
+  }
+
+  async removeApplicant(tenantId: string, id: string) {
+    await this.findApplicantOrThrow(tenantId, id);
+    await this.prisma.applicant.delete({ where: { id } });
+    return { id, deleted: true };
+  }
+
+  async hire(applicantId: string) {
+    const updated = await this.prisma.applicant.update({
+      where: { id: applicantId },
+      data: { status: 'hired' },
+    });
+    return mapApplicant(updated);
+  }
+
+  async reject(applicantId: string) {
+    const updated = await this.prisma.applicant.update({
+      where: { id: applicantId },
+      data: { status: 'rejected' },
+    });
+    return mapApplicant(updated);
+  }
+
+  async scheduleInterview(applicantId: string, body: Record<string, string>) {
+    const applicant = await this.prisma.applicant.findUnique({
+      where: { id: applicantId },
+    });
+    if (!applicant) this.helpers.throwNotFound('Applicant');
+    const interview = await this.prisma.interview.create({
+      data: {
+        tenantId: applicant.tenantId,
+        applicantId,
+        scheduledAt: body.scheduledAt
+          ? new Date(body.scheduledAt)
+          : new Date(Date.now() + 86400000),
+        status: 'scheduled',
+      },
+    });
+    return { applicantId, interview: mapInterview(interview), status: 'scheduled' };
   }
 }

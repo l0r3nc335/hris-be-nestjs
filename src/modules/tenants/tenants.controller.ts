@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { TenantsService } from './tenants.service';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -16,9 +16,24 @@ export class TenantsController {
     return this.service.list();
   }
 
+  @Get('trashed')
+  listTrashed() {
+    return this.service.listTrashed();
+  }
+
   @Post()
   create(@Body() body: { name: string; slug: string }) {
     return this.service.create(body);
+  }
+
+  @Patch(':id/soft-delete')
+  softDelete(@Param('id') id: string) {
+    return this.service.softDelete(id);
+  }
+
+  @Patch(':id/restore')
+  restore(@Param('id') id: string) {
+    return this.service.restore(id);
   }
 
   @Post(':id/suspend')
@@ -42,5 +57,10 @@ export class TenantsController {
     @Body() body: { name?: string; status?: string },
   ) {
     return this.service.update(id, body);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 }

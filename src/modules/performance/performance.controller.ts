@@ -25,12 +25,21 @@ export class PerformanceController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('reviews/trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
   @Get('ratings/:employeeId')
-  ratings(@Param('employeeId') employeeId: string) {
-    return this.service.ratings('', employeeId);
+  ratings(
+    @CurrentUser() user: RequestUser,
+    @Param('employeeId') employeeId: string,
+  ) {
+    return this.service.ratings(user.tenantId, employeeId);
   }
 
   @Post('reviews')
+  @Permissions('employees:write')
   create(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -39,13 +48,27 @@ export class PerformanceController {
   }
 
   @Post('reviews/:id/submit')
+  @Permissions('employees:write')
   submit(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.submit(user.tenantId, id);
   }
 
   @Post('reviews/:id/approve')
+  @Permissions('employees:write')
   approve(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.approve(user.tenantId, id);
+  }
+
+  @Patch('reviews/:id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch('reviews/:id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
   }
 
   @Get('reviews/:id')
@@ -55,6 +78,7 @@ export class PerformanceController {
 
   @Put('reviews/:id')
   @Patch('reviews/:id')
+  @Permissions('employees:write')
   update(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -64,6 +88,7 @@ export class PerformanceController {
   }
 
   @Delete('reviews/:id')
+  @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.remove(user.tenantId, id);
   }

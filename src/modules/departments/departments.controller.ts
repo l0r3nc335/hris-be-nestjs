@@ -25,6 +25,23 @@ export class DepartmentsController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('departments:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('departments:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Get(':id/employees')
   employees(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.employees(user.tenantId, id);
@@ -36,6 +53,7 @@ export class DepartmentsController {
   }
 
   @Post()
+  @Permissions('departments:write')
   create(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -44,6 +62,7 @@ export class DepartmentsController {
   }
 
   @Put(':id')
+  @Permissions('departments:write')
   updatePut(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -53,6 +72,7 @@ export class DepartmentsController {
   }
 
   @Patch(':id')
+  @Permissions('departments:write')
   updatePatch(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -62,6 +82,7 @@ export class DepartmentsController {
   }
 
   @Delete(':id')
+  @Permissions('departments:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.remove(user.tenantId, id);
   }

@@ -25,7 +25,25 @@ export class InterviewsController {
     return this.service.list(user.tenantId);
   }
 
+  @Get('trashed')
+  listTrashed(@CurrentUser() user: RequestUser) {
+    return this.service.listTrashed(user.tenantId);
+  }
+
+  @Patch(':id/soft-delete')
+  @Permissions('employees:write')
+  softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.softDelete(user.tenantId, id);
+  }
+
+  @Patch(':id/restore')
+  @Permissions('employees:write')
+  restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
+    return this.service.restore(user.tenantId, id);
+  }
+
   @Patch(':id/reschedule')
+  @Permissions('employees:write')
   reschedule(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -35,6 +53,7 @@ export class InterviewsController {
   }
 
   @Patch(':id/complete')
+  @Permissions('employees:write')
   complete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.complete(user.tenantId, id);
   }
@@ -45,6 +64,7 @@ export class InterviewsController {
   }
 
   @Post()
+  @Permissions('employees:write')
   create(
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
@@ -54,6 +74,7 @@ export class InterviewsController {
 
   @Put(':id')
   @Patch(':id')
+  @Permissions('employees:write')
   update(
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
@@ -63,6 +84,7 @@ export class InterviewsController {
   }
 
   @Delete(':id')
+  @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
     return this.service.remove(user.tenantId, id);
   }

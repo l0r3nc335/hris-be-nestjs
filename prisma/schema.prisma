@@ -8,15 +8,35 @@ datasource db {
 }
 
 model Tenant {
-  id        String     @id @default(uuid())
-  name      String
-  slug      String     @unique
-  status    String     @default("active")
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  users     User[]
-  hrRecords HrRecord[]
-  auditLogs AuditLog[]
+  id                String             @id @default(uuid())
+  name              String
+  slug              String             @unique
+  status            String             @default("active")
+  deletedAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  users             User[]
+  auditLogs         AuditLog[]
+  departments       Department[]
+  positions         Position[]
+  employees         Employee[]
+  attendanceRecords AttendanceRecord[]
+  leaveTypes        LeaveType[]
+  leaveRequests     LeaveRequest[]
+  payrollRecords    PayrollRecord[]
+  compensationRecords CompensationRecord[]
+  salaryStructures  SalaryStructure[]
+  timeLogs          TimeLog[]
+  jobPostings       JobPosting[]
+  applicants        Applicant[]
+  interviews        Interview[]
+  performanceReviews PerformanceReview[]
+  notifications     Notification[]
+  companySettings   CompanySetting[]
+  billingInvoices   BillingInvoice[]
+  documents         Document[]
+
+  @@index([deletedAt])
 }
 
 model User {
@@ -29,24 +49,28 @@ model User {
   role          String         @default("user")
   isActive      Boolean        @default(true)
   emailVerified Boolean        @default(false)
+  deletedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
   userRoles     UserRole[]
+  employee      Employee?
+  notifications Notification[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
+  @@index([tenantId, deletedAt])
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   tokenHash String
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([tokenHash])
@@ -57,12 +81,14 @@ model Role {
   tenantId        String
   name            String
   slug            String
+  deletedAt       DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   rolePermissions RolePermission[]
   userRoles       UserRole[]
 
   @@unique([tenantId, slug])
+  @@index([tenantId, deletedAt])
 }
 
 model Permission {
@@ -91,39 +117,335 @@ model UserRole {
 }
 
 model AuditLog {
-  id         String   @id @default(uuid())
-  tenantId   String
-  actorId    String?
-  action     String
-  entity     String
-  entityId   String?
-  metadata   Json?
-  ip         String?
-  userAgent  String?
-  createdAt  DateTime @default(now())
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid())
+  tenantId  String
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([entity, entityId])
   @@index([actorId])
 }
 
-model HrRecord {
+model Department {
+  id         String       @id @default(uuid())
+  tenantId   String
+  name       String
+  status     String       @default("active")
+  parentId   String?
+  managerId  String?
+  deletedAt  DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  tenant     Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent     Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children   Department[] @relation("DepartmentHierarchy")
+  positions  Position[]
+  employees  Employee[]
+
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([tenantId, deletedAt])
+}
+
+model Position {
+  id           String     @id @default(uuid())
+  tenantId     String
+  title        String
+  status       String     @default("active")
+  departmentId String?
+  deletedAt    DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department   Department? @relation(fields: [departmentId], references: [id])
+  employees    Employee[]
+
+  @@index([tenantId])
+  @@index([departmentId])
+  @@index([tenantId, deletedAt])
+}
+
+model Employee {
+  id                 String              @id @default(uuid())
+  tenantId           String
+  firstName          String
+  lastName           String
+  status             String              @default("active")
+  departmentId       String?
+  positionId         String?
+  userId             String?             @unique
+  managerId          String?
+  hireDate           DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  department         Department?         @relation(fields: [departmentId], references: [id])
+  position           Position?           @relation(fields: [positionId], references: [id])
+  user               User?               @relation(fields: [userId], references: [id])
+  manager            Employee?           @relation("EmployeeManager", fields: [managerId], references: [id])
+  directReports      Employee[]          @relation("EmployeeManager")
+  attendanceRecords  AttendanceRecord[]
+  leaveRequests      LeaveRequest[]
+  payrollRecords     PayrollRecord[]
+  compensationRecords CompensationRecord[]
+  timeLogs           TimeLog[]
+  performanceReviews PerformanceReview[]
+  documents          Document[]
+
+  @@index([tenantId])
+  @@index([departmentId])
+  @@index([managerId])
+  @@index([tenantId, deletedAt])
+}
+
+model AttendanceRecord {
   id         String   @id @default(uuid())
   tenantId   String
-  entityType String
-  name       String
-  status     String   @default("active")
-  metadata   Json?
+  employeeId String
+  date       DateTime @db.Date
+  status     String   @default("present")
+  deletedAt  DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId, entityType])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, deletedAt])
+}
+
+model LeaveType {
+  id            String         @id @default(uuid())
+  tenantId      String
+  name          String
+  status        String         @default("active")
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leaveRequests LeaveRequest[]
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model LeaveRequest {
+  id          String    @id @default(uuid())
+  tenantId    String
+  employeeId  String
+  leaveTypeId String
+  status      String    @default("pending")
+  startDate   DateTime  @db.Date
+  endDate     DateTime  @db.Date
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([tenantId, deletedAt])
+}
+
+model PayrollRecord {
+  id         String   @id @default(uuid())
+  tenantId   String
+  employeeId String
+  period     String
+  status     String   @default("pending")
+  amount     Decimal  @db.Decimal(12, 2)
+  deletedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, deletedAt])
+}
+
+model CompensationRecord {
+  id         String   @id @default(uuid())
+  tenantId   String
+  employeeId String
+  baseSalary Decimal  @db.Decimal(12, 2)
+  status     String   @default("active")
+  deletedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, deletedAt])
+}
+
+model SalaryStructure {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  status    String   @default("active")
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model TimeLog {
+  id         String    @id @default(uuid())
+  tenantId   String
+  employeeId String
+  status     String    @default("running")
+  startedAt  DateTime
+  endedAt    DateTime?
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, deletedAt])
+}
+
+model JobPosting {
+  id         String      @id @default(uuid())
+  tenantId   String
+  title      String
+  status     String      @default("open")
+  deletedAt  DateTime?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  applicants Applicant[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([tenantId, deletedAt])
+}
+
+model Applicant {
+  id         String     @id @default(uuid())
+  tenantId   String
+  jobId      String
+  name       String
+  status     String     @default("applied")
+  deletedAt  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job        JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  interviews Interview[]
+
+  @@index([tenantId])
+  @@index([jobId])
+  @@index([tenantId, deletedAt])
+}
+
+model Interview {
+  id          String    @id @default(uuid())
+  tenantId    String
+  applicantId String
+  scheduledAt DateTime
+  status      String    @default("scheduled")
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  applicant   Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([applicantId])
+  @@index([tenantId, deletedAt])
+}
+
+model PerformanceReview {
+  id         String   @id @default(uuid())
+  tenantId   String
+  employeeId String
+  period     String
+  status     String   @default("draft")
+  deletedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, deletedAt])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String?
+  title     String
+  status    String   @default("active")
+  read      Boolean  @default(false)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([tenantId, deletedAt])
+}
+
+model CompanySetting {
+  id        String   @id @default(uuid())
+  tenantId  String
+  key       String
+  value     String
+  status    String   @default("active")
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key])
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model BillingInvoice {
+  id        String   @id @default(uuid())
+  tenantId  String
+  amount    Decimal  @db.Decimal(12, 2)
+  status    String   @default("pending")
+  dueDate   DateTime @db.Date
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
 }
 
 model Document {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   tenantId     String
   employeeId   String?
   filename     String
@@ -131,9 +453,13 @@ model Document {
   mimeType     String
   size         Int
   path         String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee     Employee? @relation(fields: [employeeId], references: [id])
 
   @@index([tenantId])
   @@index([employeeId])
+  @@index([tenantId, deletedAt])
 }
