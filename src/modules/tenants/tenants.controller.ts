@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { TenantsService } from './tenants.service';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { SkipTenant } from '../../common/decorators/skip-tenant.decorator';
@@ -12,13 +13,13 @@ export class TenantsController {
   constructor(private readonly service: TenantsService) {}
 
   @Get()
-  list() {
-    return this.service.list();
+  list(@Query() query: PaginationQueryDto) {
+    return this.service.list(query);
   }
 
   @Get('trashed')
-  listTrashed() {
-    return this.service.listTrashed();
+  listTrashed(@Query() query: PaginationQueryDto) {
+    return this.service.listTrashed(query);
   }
 
   @Post()

@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CompensationService } from './compensation.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -12,13 +13,13 @@ export class CompensationController {
   constructor(private readonly service: CompensationService) {}
 
   @Get('compensation')
-  list(@CurrentUser() user: RequestUser) {
-    return this.service.list(user.tenantId);
+  list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.list(user.tenantId, query);
   }
 
   @Get('compensation/trashed')
-  listTrashed(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashed(user.tenantId);
+  listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashed(user.tenantId, query);
   }
 
   @Post('compensation')
@@ -78,13 +79,13 @@ export class CompensationController {
   }
 
   @Get('salary-structures')
-  salaryStructures(@CurrentUser() user: RequestUser) {
-    return this.service.salaryStructures(user.tenantId);
+  salaryStructures(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.salaryStructures(user.tenantId, query);
   }
 
   @Get('salary-structures/trashed')
-  listTrashedStructures(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashedStructures(user.tenantId);
+  listTrashedStructures(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashedStructures(user.tenantId, query);
   }
 
   @Post('salary-structures')

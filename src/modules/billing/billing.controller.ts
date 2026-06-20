@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { BillingService } from './billing.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -34,13 +35,13 @@ export class BillingController {
   }
 
   @Get('invoices')
-  invoices(@CurrentUser() user: RequestUser) {
-    return this.service.invoices(user.tenantId);
+  invoices(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.invoices(user.tenantId, query);
   }
 
   @Get('invoices/trashed')
-  listTrashedInvoices(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashedInvoices(user.tenantId);
+  listTrashedInvoices(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashedInvoices(user.tenantId, query);
   }
 
   @Post('invoices')

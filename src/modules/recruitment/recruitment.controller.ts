@@ -1,14 +1,13 @@
-import {
-  Body,
+import { Body,
   Controller,
   Delete,
   Get,
   Param,
   Patch,
   Post,
-  Put,
-} from '@nestjs/common';
+  Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { RecruitmentService } from './recruitment.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -21,13 +20,13 @@ export class RecruitmentController {
   constructor(private readonly service: RecruitmentService) {}
 
   @Get('jobs')
-  listJobs(@CurrentUser() user: RequestUser) {
-    return this.service.listJobs(user.tenantId);
+  listJobs(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listJobs(user.tenantId, query);
   }
 
   @Get('jobs/trashed')
-  listTrashedJobs(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashedJobs(user.tenantId);
+  listTrashedJobs(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashedJobs(user.tenantId, query);
   }
 
   @Post('jobs')
@@ -74,13 +73,13 @@ export class RecruitmentController {
   }
 
   @Get('applicants')
-  listApplicants(@CurrentUser() user: RequestUser) {
-    return this.service.listApplicants(user.tenantId);
+  listApplicants(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listApplicants(user.tenantId, query);
   }
 
   @Get('applicants/trashed')
-  listTrashedApplicants(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashedApplicants(user.tenantId);
+  listTrashedApplicants(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashedApplicants(user.tenantId, query);
   }
 
   @Post('applicants')

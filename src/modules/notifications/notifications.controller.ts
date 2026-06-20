@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -36,13 +37,18 @@ export class NotificationsController {
   }
 
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.service.list(user.tenantId);
+  list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.list(user.tenantId, query);
+  }
+
+  @Get('recent')
+  recent(@CurrentUser() user: RequestUser) {
+    return this.service.listDetails(user.tenantId);
   }
 
   @Get('trashed')
-  listTrashed(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashed(user.tenantId);
+  listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashed(user.tenantId, query);
   }
 
   @Patch(':id/soft-delete')

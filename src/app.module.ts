@@ -13,11 +13,13 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { EmployeesModule } from './modules/employees/employees.module';
+import { EmployeeDepartmentsModule } from './modules/employee-departments/employee-departments.module';
 import { DepartmentsModule } from './modules/departments/departments.module';
 import { PositionsModule } from './modules/positions/positions.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
@@ -38,6 +40,10 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { BenefitsModule } from './modules/benefits/benefits.module';
+import { TrainingModule } from './modules/training/training.module';
+import { MessagesModule } from './modules/messages/messages.module';
 
 @Module({
   imports: [
@@ -62,6 +68,7 @@ import { BillingModule } from './modules/billing/billing.module';
     AuditModule,
     UsersModule,
     EmployeesModule,
+    EmployeeDepartmentsModule,
     DepartmentsModule,
     PositionsModule,
     AttendanceModule,
@@ -81,6 +88,10 @@ import { BillingModule } from './modules/billing/billing.module';
     SettingsModule,
     TenantsModule,
     BillingModule,
+    OnboardingModule,
+    BenefitsModule,
+    TrainingModule,
+    MessagesModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
@@ -88,6 +99,7 @@ import { BillingModule } from './modules/billing/billing.module';
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: TenantGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],

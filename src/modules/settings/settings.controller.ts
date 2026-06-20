@@ -1,5 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { SettingsService } from './settings.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -25,13 +26,13 @@ export class SettingsController {
   }
 
   @Get('leave-types')
-  leaveTypes(@CurrentUser() user: RequestUser) {
-    return this.service.leaveTypes(user.tenantId);
+  leaveTypes(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.leaveTypes(user.tenantId, query);
   }
 
   @Get('leave-types/trashed')
-  listTrashedLeaveTypes(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashedLeaveTypes(user.tenantId);
+  listTrashedLeaveTypes(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashedLeaveTypes(user.tenantId, query);
   }
 
   @Post('leave-types')
@@ -77,13 +78,13 @@ export class SettingsController {
   }
 
   @Get()
-  root(@CurrentUser() user: RequestUser) {
-    return this.service.list(user.tenantId);
+  root(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.list(user.tenantId, query);
   }
 
   @Get('trashed')
-  listTrashed(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashed(user.tenantId);
+  listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashed(user.tenantId, query);
   }
 
   @Post()

@@ -1,15 +1,14 @@
-import {
-  Controller,
+import { Controller,
   Delete,
   Get,
   Param,
   Patch,
   Post,
   UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
+  UseInterceptors, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { DocumentsService } from './documents.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -41,13 +40,13 @@ export class DocumentsController {
   }
 
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.service.list(user.tenantId);
+  list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.list(user.tenantId, query);
   }
 
   @Get('trashed')
-  listTrashed(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashed(user.tenantId);
+  listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashed(user.tenantId, query);
   }
 
   @Patch(':id/soft-delete')

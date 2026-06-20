@@ -1,15 +1,24 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
+import type { Request } from 'express';
 import { PrismaService } from '../../../database/prisma.service';
 import { RequestUser } from '../../../common/types/request-user';
+import {
+  ACCESS_COOKIE,
+} from '../auth-cookies.service';
 
 export interface JwtPayload {
   sub: string;
   tenantId: string;
   email: string;
   role: string;
+}
+
+function extractAccessToken(req: Request): string | null {
+  const cookieToken = req.cookies?.[ACCESS_COOKIE] as string | undefined;
+  return cookieToken ?? null;
 }
 
 @Injectable()
@@ -19,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly prisma: PrismaService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractAccessToken,
       ignoreExpiration: false,
       secretOrKey:
         config.get<string>('jwt.accessSecret') ??

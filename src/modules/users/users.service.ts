@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { paginate } from '../../common/helpers/pagination.helper';
 import { mapUser } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import {
@@ -10,6 +13,13 @@ import {
   tenantActiveWhere,
   tenantTrashedWhere,
 } from '../../common/services/soft-delete-crud.helper';
+
+function buildUserStatusFilter(status?: string): Record<string, unknown> {
+  if (!status || status === 'all') return {};
+  if (status === 'active') return { isActive: true };
+  if (status === 'inactive') return { isActive: false };
+  return {};
+}
 
 @Injectable()
 export class UsersService {
@@ -27,20 +37,32 @@ export class UsersService {
     return record;
   }
 
-  async list(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.user.findMany({
+  async list(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.user, {
       where: tenantActiveWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapUser,
+      query,
+      searchFields: ['firstName', 'lastName', 'email'],
+      resolveStatusFilter: buildUserStatusFilter,
     });
-    return records.map(mapUser);
   }
 
-  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.user.findMany({
+  async listTrashed(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.user, {
       where: tenantTrashedWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapUser,
+      query,
+      searchFields: ['firstName', 'lastName', 'email'],
+      resolveStatusFilter: buildUserStatusFilter,
     });
-    return records.map(mapUser);
   }
 
   async get(tenantId: string, id: string): Promise<ListEntityDto> {
@@ -60,10 +82,8 @@ export class UsersService {
   }
 
   async search(tenantId: string, q?: string): Promise<ListEntityDto[]> {
-    const items = await this.list(tenantId);
-    if (!q) return items;
-    const lower = q.toLowerCase();
-    return items.filter((i) => i.name.toLowerCase().includes(lower));
+    const result = await this.list(tenantId, { q, page: 1, limit: 100 });
+    return result.data;
   }
 
   async active(tenantId: string): Promise<ListEntityDto[]> {

@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
-import { mapNotification } from '../../common/mappers/domain.mappers';
+import { paginate } from '../../common/helpers/pagination.helper';
+import { mapNotification, mapNotificationDetail } from '../../common/mappers/domain.mappers';
+import type { NotificationDetailDto } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import {
   restoreData,
@@ -25,20 +29,37 @@ export class NotificationsService {
     return record;
   }
 
-  async list(tenantId: string): Promise<ListEntityDto[]> {
+  async list(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.notification, {
+      where: tenantActiveWhere(tenantId),
+      orderBy: { createdAt: 'desc' },
+      mapFn: mapNotification,
+      query,
+    });
+  }
+
+  async listDetails(tenantId: string): Promise<NotificationDetailDto[]> {
     const records = await this.prisma.notification.findMany({
       where: tenantActiveWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      take: 20,
     });
-    return records.map(mapNotification);
+    return records.map(mapNotificationDetail);
   }
 
-  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.notification.findMany({
+  async listTrashed(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.notification, {
       where: tenantTrashedWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapNotification,
+      query,
     });
-    return records.map(mapNotification);
   }
 
   async get(tenantId: string, id: string): Promise<ListEntityDto> {

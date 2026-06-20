@@ -1,5 +1,6 @@
 import {
   employeeName,
+  EmployeeDepartmentDto,
   ListEntityDto,
   toListDto,
   userName,
@@ -24,6 +25,31 @@ export function mapEmployee(
     employeeName(record.firstName, record.lastName),
     resolveListStatus(record.status, record.deletedAt),
   );
+}
+
+export function mapEmployeeDepartment(
+  record: {
+    id: string;
+    tenantId: string;
+    firstName: string;
+    lastName: string;
+    status: string;
+    departmentId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    department?: { name: string } | null;
+  } & WithDeleted,
+): EmployeeDepartmentDto {
+  const base = toListDto(
+    record,
+    employeeName(record.firstName, record.lastName),
+    resolveListStatus(record.status, record.deletedAt),
+  );
+  return {
+    ...base,
+    departmentId: record.departmentId,
+    departmentName: record.department?.name ?? '—',
+  };
 }
 
 export function mapUser(
@@ -316,6 +342,7 @@ export function mapNotification(
     id: string;
     tenantId: string;
     title: string;
+    body?: string | null;
     status: string;
     read: boolean;
     createdAt: Date;
@@ -328,6 +355,99 @@ export function mapNotification(
       ? 'read'
       : record.status;
   return toListDto(record, record.title, status);
+}
+
+export interface NotificationDetailDto {
+  id: string;
+  title: string;
+  message: string;
+  read: boolean;
+  status: string;
+}
+
+export function mapNotificationDetail(
+  record: {
+    id: string;
+    title: string;
+    body?: string | null;
+    status: string;
+    read: boolean;
+  },
+): NotificationDetailDto {
+  return {
+    id: record.id,
+    title: record.title,
+    message: record.body ?? record.title,
+    read: record.read,
+    status: record.status,
+  };
+}
+
+export function mapOnboardingTask(
+  record: {
+    id: string;
+    tenantId: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } & WithDeleted,
+): ListEntityDto {
+  return toListDto(
+    record,
+    record.name,
+    resolveListStatus(record.status, record.deletedAt),
+  );
+}
+
+export function mapBenefitPlan(
+  record: {
+    id: string;
+    tenantId: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } & WithDeleted,
+): ListEntityDto {
+  return toListDto(
+    record,
+    record.name,
+    resolveListStatus(record.status, record.deletedAt),
+  );
+}
+
+export function mapTrainingCourse(
+  record: {
+    id: string;
+    tenantId: string;
+    name: string;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } & WithDeleted,
+): ListEntityDto {
+  return toListDto(
+    record,
+    record.name,
+    resolveListStatus(record.status, record.deletedAt),
+  );
+}
+
+export function mapMessage(record: {
+  id: string;
+  from: string;
+  subject: string;
+  body?: string | null;
+  read: boolean;
+}) {
+  return {
+    id: record.id,
+    from: record.from,
+    subject: record.subject,
+    body: record.body ?? '',
+    read: record.read,
+  };
 }
 
 export function mapJobPosting(

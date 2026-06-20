@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { paginate } from '../../common/helpers/pagination.helper';
 import { mapPosition } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import {
@@ -25,20 +28,30 @@ export class PositionsService {
     return record;
   }
 
-  async list(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.position.findMany({
+  async list(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.position, {
       where: tenantActiveWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapPosition,
+      query,
+      searchFields: ['title'],
     });
-    return records.map(mapPosition);
   }
 
-  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.position.findMany({
+  async listTrashed(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.position, {
       where: tenantTrashedWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapPosition,
+      query,
+      searchFields: ['title'],
     });
-    return records.map(mapPosition);
   }
 
   async get(tenantId: string, id: string): Promise<ListEntityDto> {

@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { paginate } from '../../common/helpers/pagination.helper';
 import { mapBillingInvoice } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import {
@@ -41,20 +44,30 @@ export class BillingService {
     return [];
   }
 
-  async invoices(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.billingInvoice.findMany({
+  async invoices(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.billingInvoice, {
       where: tenantActiveWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapBillingInvoice,
+      query,
+      searchFields: ['status'],
     });
-    return records.map(mapBillingInvoice);
   }
 
-  async listTrashedInvoices(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.billingInvoice.findMany({
+  async listTrashedInvoices(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.billingInvoice, {
       where: tenantTrashedWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapBillingInvoice,
+      query,
+      searchFields: ['status'],
     });
-    return records.map(mapBillingInvoice);
   }
 
   async invoice(tenantId: string, id: string): Promise<ListEntityDto> {

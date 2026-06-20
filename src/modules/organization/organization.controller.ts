@@ -6,8 +6,10 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { OrganizationService } from './organization.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -25,8 +27,11 @@ export class OrganizationController {
   }
 
   @Get('chart/trashed')
-  listTrashed(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashed(user.tenantId);
+  listTrashed(
+    @CurrentUser() user: RequestUser,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.service.listTrashed(user.tenantId, query);
   }
 
   @Patch('chart/:id/soft-delete')

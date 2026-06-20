@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { InterviewsService } from './interviews.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -21,13 +23,13 @@ export class InterviewsController {
   constructor(private readonly service: InterviewsService) {}
 
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.service.list(user.tenantId);
+  list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.list(user.tenantId, query);
   }
 
   @Get('trashed')
-  listTrashed(@CurrentUser() user: RequestUser) {
-    return this.service.listTrashed(user.tenantId);
+  listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.service.listTrashed(user.tenantId, query);
   }
 
   @Patch(':id/soft-delete')

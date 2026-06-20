@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { paginate } from '../../common/helpers/pagination.helper';
 import { mapAuditLog } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 
@@ -36,13 +39,18 @@ export class AuditService {
     });
   }
 
-  async list(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.auditLog.findMany({
+  async list(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.auditLog, {
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      mapFn: mapAuditLog,
+      query,
+      searchFields: ['action', 'entity'],
+      resolveStatusFilter: () => ({}),
     });
-    return records.map(mapAuditLog);
   }
 
   async byEntity(tenantId: string, entity: string, entityId: string) {

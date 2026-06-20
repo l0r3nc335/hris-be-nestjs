@@ -3,8 +3,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import { ACCESS_COOKIE } from './modules/auth/auth-cookies.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -12,11 +14,13 @@ async function bootstrap() {
 
   const config = app.get(ConfigService);
   app.setGlobalPrefix('api/v1');
+  app.use(cookieParser());
   app.use(helmet());
   app.enableCors({
-    origin: config.get<string>('corsOrigin'),
+    origin: config.get<string[]>('corsOrigins'),
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id'],
+    allowedHeaders: ['Content-Type', 'X-Tenant-Id', 'X-CSRF-Token'],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   app.useGlobalPipes(
@@ -31,7 +35,7 @@ async function bootstrap() {
     .setTitle('HRIS API')
     .setDescription('Enterprise HRIS REST API')
     .setVersion('1.0')
-    .addBearerAuth()
+    .addCookieAuth(ACCESS_COOKIE)
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);

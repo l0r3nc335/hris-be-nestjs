@@ -7,6 +7,11 @@ export interface ListEntityDto {
   updatedAt: string;
 }
 
+export interface EmployeeDepartmentDto extends ListEntityDto {
+  departmentId: string | null;
+  departmentName: string;
+}
+
 export interface Timestamped {
   id: string;
   tenantId: string;

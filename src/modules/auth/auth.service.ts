@@ -13,6 +13,13 @@ import { Inject } from '@nestjs/common';
 import { REDIS_CLIENT } from '../../cache/redis.module';
 import Redis from 'ioredis';
 
+interface JwtPayload {
+  sub: string;
+  tenantId: string;
+  email: string;
+  role: string;
+}
+
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
@@ -228,6 +235,28 @@ export class AuthService {
       'EX',
       86400,
     );
+  }
+
+  async logoutByRefreshToken(refreshToken: string): Promise<void> {
+    const tokenHash = this.hashToken(refreshToken);
+    const stored = await this.prisma.refreshToken.findFirst({
+      where: { tokenHash, revokedAt: null },
+    });
+    if (stored) {
+      await this.logout(stored.userId, refreshToken);
+    }
+  }
+
+  decodeAccessToken(accessToken: string): JwtPayload | null {
+    try {
+      return this.jwt.verify<JwtPayload>(accessToken, {
+        secret:
+          this.config.get<string>('jwt.accessSecret') ??
+          'dev-access-secret-change-in-production',
+      });
+    } catch {
+      return null;
+    }
   }
 
   async me(user: RequestUser): Promise<UserResponse> {

@@ -1,5 +1,6 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AuditService } from './audit.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -12,8 +13,8 @@ export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get()
-  list(@CurrentUser() user: RequestUser) {
-    return this.auditService.list(user.tenantId);
+  list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
+    return this.auditService.list(user.tenantId, query);
   }
 
   @Get('user/:userId')

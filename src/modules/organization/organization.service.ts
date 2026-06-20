@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { DepartmentsService } from '../departments/departments.service';
-import {
-  mapPosition,
-} from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import { tenantActiveWhere } from '../../common/services/soft-delete-crud.helper';
+
+export interface OrgChartNodeDto {
+  id: string;
+  name: string;
+  title: string;
+  children: OrgChartNodeDto[];
+}
 
 @Injectable()
 export class OrganizationService {
@@ -15,11 +21,16 @@ export class OrganizationService {
   ) {}
 
   async chart(tenantId: string): Promise<ListEntityDto[]> {
-    return this.departments.list(tenantId);
+    return (
+      await this.departments.list(tenantId, { page: 1, limit: 100 })
+    ).data;
   }
 
-  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
-    return this.departments.listTrashed(tenantId);
+  async listTrashed(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return this.departments.listTrashed(tenantId, query);
   }
 
   async getChartNode(tenantId: string, id: string): Promise<ListEntityDto> {
@@ -65,11 +76,33 @@ export class OrganizationService {
     }));
   }
 
-  async positionsTree(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.position.findMany({
+  async positionsTree(tenantId: string): Promise<OrgChartNodeDto[]> {
+    const employees = await this.prisma.employee.findMany({
       where: tenantActiveWhere(tenantId),
-      orderBy: { title: 'asc' },
+      include: { position: true },
+      orderBy: { firstName: 'asc' },
     });
-    return records.map(mapPosition);
+
+    const nodes = new Map<string, OrgChartNodeDto>();
+    for (const employee of employees) {
+      nodes.set(employee.id, {
+        id: employee.id,
+        name: `${employee.firstName} ${employee.lastName}`,
+        title: employee.position?.title ?? 'Employee',
+        children: [],
+      });
+    }
+
+    const roots: OrgChartNodeDto[] = [];
+    for (const employee of employees) {
+      const node = nodes.get(employee.id)!;
+      if (employee.managerId && nodes.has(employee.managerId)) {
+        nodes.get(employee.managerId)!.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+
+    return roots;
   }
 }

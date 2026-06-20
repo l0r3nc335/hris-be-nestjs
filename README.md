@@ -7,7 +7,7 @@ This is a **standalone Git repository**. The React frontend lives in a separate 
 ## Stack
 
 - NestJS 11, PostgreSQL, Prisma, Redis, BullMQ
-- JWT auth + refresh tokens, RBAC, multi-tenant (`tenantId` + `X-Tenant-Id`)
+- HttpOnly cookie auth (access + refresh JWT/opaque tokens), RBAC, multi-tenant (`tenantId` + `X-Tenant-Id`)
 - Swagger: `http://localhost:3000/api/docs`
 
 ## Quick start

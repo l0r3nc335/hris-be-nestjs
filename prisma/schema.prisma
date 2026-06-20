@@ -35,6 +35,10 @@ model Tenant {
   companySettings   CompanySetting[]
   billingInvoices   BillingInvoice[]
   documents         Document[]
+  onboardingTasks   OnboardingTask[]
+  benefitPlans      BenefitPlan[]
+  trainingCourses   TrainingCourse[]
+  messages          Message[]
 
   @@index([deletedAt])
 }
@@ -57,6 +61,7 @@ model User {
   userRoles     UserRole[]
   employee      Employee?
   notifications Notification[]
+  messages      Message[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
@@ -200,6 +205,7 @@ model Employee {
   timeLogs           TimeLog[]
   performanceReviews PerformanceReview[]
   documents          Document[]
+  onboardingTasks    OnboardingTask[]
 
   @@index([tenantId])
   @@index([departmentId])
@@ -400,6 +406,7 @@ model Notification {
   tenantId  String
   userId    String?
   title     String
+  body      String?
   status    String   @default("active")
   read      Boolean  @default(false)
   deletedAt DateTime?
@@ -407,6 +414,73 @@ model Notification {
   updatedAt DateTime @updatedAt
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([tenantId, deletedAt])
+}
+
+model OnboardingTask {
+  id         String    @id @default(uuid())
+  tenantId   String
+  name       String
+  status     String    @default("active")
+  employeeId String?
+  dueDate    DateTime? @db.Date
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([tenantId, deletedAt])
+}
+
+model BenefitPlan {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  planType  String   @default("health")
+  status    String   @default("active")
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model TrainingCourse {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  category  String?
+  status    String   @default("active")
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([tenantId, deletedAt])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  tenantId  String
+  userId    String
+  from      String
+  subject   String
+  body      String?
+  read      Boolean  @default(false)
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([userId])

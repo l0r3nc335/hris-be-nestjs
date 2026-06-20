@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { paginate } from '../../common/helpers/pagination.helper';
 import { mapCompensation, mapSalaryStructure } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import {
@@ -33,20 +36,28 @@ export class CompensationService {
     return record;
   }
 
-  async list(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.compensationRecord.findMany({
+  async list(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.compensationRecord, {
       where: tenantActiveWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapCompensation,
+      query,
     });
-    return records.map(mapCompensation);
   }
 
-  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.compensationRecord.findMany({
+  async listTrashed(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.compensationRecord, {
       where: tenantTrashedWhere(tenantId),
       orderBy: { createdAt: 'desc' },
+      mapFn: mapCompensation,
+      query,
     });
-    return records.map(mapCompensation);
   }
 
   async get(tenantId: string, id: string): Promise<ListEntityDto> {
@@ -96,18 +107,26 @@ export class CompensationService {
     return mapSalaryStructure(record);
   }
 
-  async salaryStructures(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.salaryStructure.findMany({
+  async salaryStructures(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.salaryStructure, {
       where: tenantActiveWhere(tenantId),
+      mapFn: mapSalaryStructure,
+      query,
     });
-    return records.map(mapSalaryStructure);
   }
 
-  async listTrashedStructures(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.salaryStructure.findMany({
+  async listTrashedStructures(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.salaryStructure, {
       where: tenantTrashedWhere(tenantId),
+      mapFn: mapSalaryStructure,
+      query,
     });
-    return records.map(mapSalaryStructure);
   }
 
   async getStructure(tenantId: string, id: string): Promise<ListEntityDto> {

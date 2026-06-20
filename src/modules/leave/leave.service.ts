@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.helper';
+import { paginate } from '../../common/helpers/pagination.helper';
 import { mapLeaveRequest, mapLeaveType } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
 import {
@@ -9,6 +12,8 @@ import {
   tenantActiveWhere,
   tenantTrashedWhere,
 } from '../../common/services/soft-delete-crud.helper';
+
+const leaveTypeInclude = { leaveType: true } as const;
 
 @Injectable()
 export class LeaveService {
@@ -26,22 +31,30 @@ export class LeaveService {
     return record;
   }
 
-  async list(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.leaveRequest.findMany({
+  async list(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.leaveRequest, {
       where: tenantActiveWhere(tenantId),
-      include: { leaveType: true },
       orderBy: { createdAt: 'desc' },
+      mapFn: mapLeaveRequest,
+      query,
+      findManyExtras: { include: leaveTypeInclude },
     });
-    return records.map(mapLeaveRequest);
   }
 
-  async listTrashed(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.leaveRequest.findMany({
+  async listTrashed(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.leaveRequest, {
       where: tenantTrashedWhere(tenantId),
-      include: { leaveType: true },
       orderBy: { createdAt: 'desc' },
+      mapFn: mapLeaveRequest,
+      query,
+      findManyExtras: { include: leaveTypeInclude },
     });
-    return records.map(mapLeaveRequest);
   }
 
   async get(tenantId: string, id: string): Promise<ListEntityDto> {
@@ -157,10 +170,14 @@ export class LeaveService {
     return { id, deleted: true };
   }
 
-  async listLeaveTypes(tenantId: string): Promise<ListEntityDto[]> {
-    const records = await this.prisma.leaveType.findMany({
+  async listLeaveTypes(
+    tenantId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResponseDto<ListEntityDto>> {
+    return paginate(this.prisma.leaveType, {
       where: tenantActiveWhere(tenantId),
+      mapFn: mapLeaveType,
+      query,
     });
-    return records.map(mapLeaveType);
   }
 }
