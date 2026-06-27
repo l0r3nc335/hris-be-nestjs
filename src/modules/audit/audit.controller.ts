@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AuditService } from './audit.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('audit')
@@ -14,12 +15,12 @@ export class AuditController {
 
   @Get()
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.auditService.list(user.tenantId, query);
+    return this.auditService.list(ctxFromUser(user), query);
   }
 
   @Get('user/:userId')
   byUser(@CurrentUser() user: RequestUser, @Param('userId') userId: string) {
-    return this.auditService.byUser(user.tenantId, userId);
+    return this.auditService.byUser(ctxFromUser(user), userId);
   }
 
   @Get(':entity/:id')
@@ -28,11 +29,11 @@ export class AuditController {
     @Param('entity') entity: string,
     @Param('id') id: string,
   ) {
-    return this.auditService.byEntity(user.tenantId, entity, id);
+    return this.auditService.byEntity(ctxFromUser(user), entity, id);
   }
 
   @Get(':id')
   getById(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.auditService.getById(user.tenantId, id);
+    return this.auditService.getById(ctxFromUser(user), id);
   }
 }

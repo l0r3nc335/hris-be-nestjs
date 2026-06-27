@@ -13,6 +13,7 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { OriginGuard } from './common/guards/origin.guard';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { TenantGuard } from './common/guards/tenant.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -98,6 +99,7 @@ import { MessagesModule } from './modules/messages/messages.module';
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: OriginGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: TenantGuard },

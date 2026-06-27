@@ -38,11 +38,12 @@ API: `http://localhost:3000/api/v1`
 In the frontend repo's `.env` (sibling `../FE/` when using the local workspace layout):
 
 ```
-VITE_API_BASE_URL=http://localhost:3000
-VITE_USE_MOCKS=false
+VITE_API_BASE_URL=
 ```
 
-CORS is configured for `http://localhost:5173` (Vite dev server).
+CORS is configured for `http://localhost:5173` (Vite dev server). The FE should normally use the Vite proxy for browser development so cookie auth and CSRF stay same-origin. Set `VITE_API_BASE_URL=http://localhost:3000` only for direct API contexts such as FE integration tests.
+
+For the full FE + BE authentication walkthrough, see [`../FE/.cursor/rules/authentication-walkthrough.mdc`](../FE/.cursor/rules/authentication-walkthrough.mdc).
 
 ## Scripts
 

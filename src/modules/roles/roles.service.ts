@@ -122,14 +122,16 @@ export class RolesService {
   }
 
   assignPermissions(roleId: string, permissionIds: string[]) {
-    return Promise.all(
-      permissionIds.map((permissionId) =>
-        this.prisma.rolePermission.upsert({
-          where: { roleId_permissionId: { roleId, permissionId } },
-          create: { roleId, permissionId },
-          update: {},
-        }),
-      ),
-    );
+    return this.prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({ where: { roleId } });
+      if (permissionIds.length === 0) return [];
+      await tx.rolePermission.createMany({
+        data: permissionIds.map((permissionId) => ({ roleId, permissionId })),
+      });
+      return tx.rolePermission.findMany({
+        where: { roleId },
+        include: { permission: true },
+      });
+    });
   }
 }

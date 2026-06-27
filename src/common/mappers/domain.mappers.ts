@@ -69,11 +69,15 @@ export function mapUser(
     : record.isActive
       ? 'active'
       : 'inactive';
-  return toListDto(
-    record,
-    userName(record.firstName, record.lastName, record.email),
-    status,
-  );
+  return {
+    ...toListDto(
+      record,
+      userName(record.firstName, record.lastName, record.email),
+      status,
+    ),
+    firstName: record.firstName,
+    lastName: record.lastName,
+  };
 }
 
 export function mapRole(

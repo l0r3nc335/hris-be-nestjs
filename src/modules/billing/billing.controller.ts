@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { BillingService } from './billing.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('billing')
@@ -36,12 +37,12 @@ export class BillingController {
 
   @Get('invoices')
   invoices(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.invoices(user.tenantId, query);
+    return this.service.invoices(ctxFromUser(user), query);
   }
 
   @Get('invoices/trashed')
   listTrashedInvoices(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashedInvoices(user.tenantId, query);
+    return this.service.listTrashedInvoices(ctxFromUser(user), query);
   }
 
   @Post('invoices')
@@ -50,7 +51,7 @@ export class BillingController {
     @CurrentUser() user: RequestUser,
     @Body() body: { amount?: number; status?: string },
   ) {
-    return this.service.createInvoice(user.tenantId, body);
+    return this.service.createInvoice(ctxFromUser(user), body);
   }
 
   @Patch('invoices/:id/soft-delete')
@@ -59,7 +60,7 @@ export class BillingController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.softDeleteInvoice(user.tenantId, id);
+    return this.service.softDeleteInvoice(ctxFromUser(user), id);
   }
 
   @Patch('invoices/:id/restore')
@@ -68,12 +69,12 @@ export class BillingController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.restoreInvoice(user.tenantId, id);
+    return this.service.restoreInvoice(ctxFromUser(user), id);
   }
 
   @Get('invoices/:id')
   invoice(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.invoice(user.tenantId, id);
+    return this.service.invoice(ctxFromUser(user), id);
   }
 
   @Put('invoices/:id')
@@ -84,12 +85,12 @@ export class BillingController {
     @Param('id') id: string,
     @Body() body: { amount?: number; status?: string },
   ) {
-    return this.service.updateInvoice(user.tenantId, id, body);
+    return this.service.updateInvoice(ctxFromUser(user), id, body);
   }
 
   @Delete('invoices/:id')
   @Permissions('billing:write')
   removeInvoice(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.removeInvoice(user.tenantId, id);
+    return this.service.removeInvoice(ctxFromUser(user), id);
   }
 }

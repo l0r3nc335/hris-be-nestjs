@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -7,6 +7,8 @@ import { EntityNotFoundHelper } from '../../common/helpers/entity-not-found.help
 import { paginate } from '../../common/helpers/pagination.helper';
 import { mapUser } from '../../common/mappers/domain.mappers';
 import { ListEntityDto } from '../../common/mappers/list-entity.mapper';
+import { AppException, ErrorCodes } from '../../common/errors/app.exception';
+import { RequestUser } from '../../common/types/request-user';
 import {
   restoreData,
   softDeleteData,
@@ -104,11 +106,21 @@ export class UsersService {
 
   async create(
     tenantId: string,
-    body: { name?: string; email?: string; status?: string },
+    body: {
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      status?: string;
+    },
   ): Promise<ListEntityDto> {
-    const { firstName, lastName } = this.helpers.parsePersonName(
-      body.name ?? 'User',
-    );
+    const { firstName, lastName } =
+      body.firstName !== undefined || body.lastName !== undefined
+        ? {
+            firstName: body.firstName?.trim() ?? '',
+            lastName: body.lastName?.trim() ?? '',
+          }
+        : this.helpers.parsePersonName(body.name ?? 'User');
     const record = await this.prisma.user.create({
       data: {
         tenantId,
@@ -125,7 +137,12 @@ export class UsersService {
   async update(
     tenantId: string,
     id: string,
-    body: { name?: string; status?: string },
+    body: {
+      name?: string;
+      firstName?: string;
+      lastName?: string;
+      status?: string;
+    },
   ): Promise<ListEntityDto> {
     const record = await this.findOrThrow(tenantId, id);
     const data: {
@@ -133,12 +150,17 @@ export class UsersService {
       lastName?: string;
       isActive?: boolean;
     } = {};
-    if (body.name) {
+    if (body.firstName !== undefined || body.lastName !== undefined) {
+      if (body.firstName !== undefined) data.firstName = body.firstName.trim();
+      if (body.lastName !== undefined) data.lastName = body.lastName.trim();
+    } else if (body.name) {
       const parsed = this.helpers.parsePersonName(body.name);
       data.firstName = parsed.firstName;
       data.lastName = parsed.lastName;
     }
-    if (body.status) data.isActive = body.status === 'active';
+    if (body.status !== undefined) {
+      data.isActive = body.status !== 'inactive';
+    }
     const updated = await this.prisma.user.update({
       where: { id: record.id },
       data,
@@ -173,6 +195,57 @@ export class UsersService {
 
   async reactivate(tenantId: string, id: string): Promise<ListEntityDto> {
     return this.restore(tenantId, id);
+  }
+
+  async getUserRoles(tenantId: string, userId: string) {
+    await this.findOrThrow(tenantId, userId);
+    const rows = await this.prisma.userRole.findMany({
+      where: { userId },
+      include: { role: true },
+    });
+    return rows.map((row) => ({
+      id: row.role.id,
+      name: row.role.name,
+      slug: row.role.slug,
+    }));
+  }
+
+  async setUserRoles(
+    actor: RequestUser,
+    tenantId: string,
+    userId: string,
+    roleIds: string[],
+  ) {
+    const target = await this.findOrThrow(tenantId, userId);
+    if (target.role === 'superadmin' && actor.role !== 'superadmin') {
+      throw new AppException(
+        ErrorCodes.AUTH_FORBIDDEN,
+        'Cannot modify superadmin roles',
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    if (actor.role !== 'superadmin') {
+      const roles = await this.prisma.role.findMany({
+        where: { id: { in: roleIds }, tenantId },
+      });
+      if (roles.some((role) => role.slug === 'superadmin')) {
+        throw new AppException(
+          ErrorCodes.AUTH_FORBIDDEN,
+          'Cannot assign superadmin role',
+          HttpStatus.FORBIDDEN,
+        );
+      }
+    }
+    for (const roleId of roleIds) {
+      await this.prisma.role.findFirstOrThrow({ where: { id: roleId, tenantId } });
+    }
+    await this.prisma.userRole.deleteMany({ where: { userId } });
+    if (roleIds.length > 0) {
+      await this.prisma.userRole.createMany({
+        data: roleIds.map((roleId) => ({ userId, roleId })),
+      });
+    }
+    return { ok: true };
   }
 
   async remove(tenantId: string, id: string) {

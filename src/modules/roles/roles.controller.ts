@@ -11,6 +11,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { RolesService } from './roles.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('roles')
@@ -26,12 +27,12 @@ export class RolesController {
 
   @Get('roles')
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('roles/trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Post('roles')
@@ -39,7 +40,7 @@ export class RolesController {
     @CurrentUser() user: RequestUser,
     @Body() body: { name: string; slug?: string },
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Get('roles/:id/permissions')
@@ -55,19 +56,27 @@ export class RolesController {
     return this.service.assignPermissions(id, body.permissionIds);
   }
 
+  @Patch('roles/:id/permissions')
+  assignPermissionsPatch(
+    @Param('id') id: string,
+    @Body() body: { permissionIds: string[] },
+  ) {
+    return this.service.assignPermissions(id, body.permissionIds);
+  }
+
   @Patch('roles/:id/soft-delete')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch('roles/:id/restore')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get('roles/:id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.get(user.tenantId, id);
+    return this.service.get(ctxFromUser(user), id);
   }
 
   @Put('roles/:id')
@@ -76,11 +85,11 @@ export class RolesController {
     @Param('id') id: string,
     @Body() body: { name?: string },
   ) {
-    return this.service.update(user.tenantId, id, body);
+    return this.service.update(ctxFromUser(user), id, body);
   }
 
   @Delete('roles/:id')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.remove(user.tenantId, id);
+    return this.service.remove(ctxFromUser(user), id);
   }
 }

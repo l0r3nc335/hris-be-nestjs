@@ -14,6 +14,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { EmployeesService } from './employees.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('employees')
@@ -24,12 +25,12 @@ export class EmployeesController {
 
   @Get('active')
   active(@CurrentUser() user: RequestUser) {
-    return this.service.active(user.tenantId);
+    return this.service.active(ctxFromUser(user));
   }
 
   @Get('resigned')
   resigned(@CurrentUser() user: RequestUser) {
-    return this.service.resigned(user.tenantId);
+    return this.service.resigned(ctxFromUser(user));
   }
 
   @Get('by-department/:departmentId')
@@ -37,7 +38,7 @@ export class EmployeesController {
     @CurrentUser() user: RequestUser,
     @Param('departmentId') departmentId: string,
   ) {
-    return this.service.byDepartment(user.tenantId, departmentId);
+    return this.service.byDepartment(ctxFromUser(user), departmentId);
   }
 
   @Get('by-manager/:managerId')
@@ -45,34 +46,34 @@ export class EmployeesController {
     @CurrentUser() user: RequestUser,
     @Param('managerId') managerId: string,
   ) {
-    return this.service.byManager(user.tenantId, managerId);
+    return this.service.byManager(ctxFromUser(user), managerId);
   }
 
   @Get()
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Patch(':id/soft-delete')
   @Permissions('employees:write')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch(':id/restore')
   @Permissions('employees:write')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get(':id/employment-history')
   employmentHistory(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.employmentHistory(user.tenantId, id);
+    return this.service.employmentHistory(ctxFromUser(user), id);
   }
 
   @Post(':id/promote')
@@ -82,7 +83,7 @@ export class EmployeesController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.promote(user.tenantId, id, body);
+    return this.service.promote(ctxFromUser(user), id, body);
   }
 
   @Post(':id/transfer')
@@ -92,12 +93,12 @@ export class EmployeesController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.transfer(user.tenantId, id, body);
+    return this.service.transfer(ctxFromUser(user), id, body);
   }
 
   @Get(':id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.get(user.tenantId, id);
+    return this.service.get(ctxFromUser(user), id);
   }
 
   @Post()
@@ -106,7 +107,7 @@ export class EmployeesController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Put(':id')
@@ -116,7 +117,7 @@ export class EmployeesController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.update(user.tenantId, id, body);
+    return this.service.update(ctxFromUser(user), id, body);
   }
 
   @Patch(':id')
@@ -126,18 +127,18 @@ export class EmployeesController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.update(user.tenantId, id, body);
+    return this.service.update(ctxFromUser(user), id, body);
   }
 
   @Patch(':id/deactivate')
   @Permissions('employees:write')
   deactivate(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.deactivate(user.tenantId, id);
+    return this.service.deactivate(ctxFromUser(user), id);
   }
 
   @Delete(':id')
   @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.remove(user.tenantId, id);
+    return this.service.remove(ctxFromUser(user), id);
   }
 }

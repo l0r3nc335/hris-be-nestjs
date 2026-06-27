@@ -5,6 +5,8 @@ export interface ListEntityDto {
   status: string;
   createdAt: string;
   updatedAt: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface EmployeeDepartmentDto extends ListEntityDto {

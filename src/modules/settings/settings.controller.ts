@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { SettingsService } from './settings.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('settings')
@@ -14,7 +15,7 @@ export class SettingsController {
 
   @Get('company')
   company(@CurrentUser() user: RequestUser) {
-    return this.service.company(user.tenantId);
+    return this.service.company(ctxFromUser(user));
   }
 
   @Put('company')
@@ -22,17 +23,17 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.updateCompany(user.tenantId, body);
+    return this.service.updateCompany(ctxFromUser(user), body);
   }
 
   @Get('leave-types')
   leaveTypes(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.leaveTypes(user.tenantId, query);
+    return this.service.leaveTypes(ctxFromUser(user), query);
   }
 
   @Get('leave-types/trashed')
   listTrashedLeaveTypes(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashedLeaveTypes(user.tenantId, query);
+    return this.service.listTrashedLeaveTypes(ctxFromUser(user), query);
   }
 
   @Post('leave-types')
@@ -40,7 +41,7 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Body() body: { name?: string },
   ) {
-    return this.service.createLeaveType(user.tenantId, body);
+    return this.service.createLeaveType(ctxFromUser(user), body);
   }
 
   @Patch('leave-types/:id/soft-delete')
@@ -48,7 +49,7 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.softDeleteLeaveType(user.tenantId, id);
+    return this.service.softDeleteLeaveType(ctxFromUser(user), id);
   }
 
   @Patch('leave-types/:id/restore')
@@ -56,7 +57,7 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.restoreLeaveType(user.tenantId, id);
+    return this.service.restoreLeaveType(ctxFromUser(user), id);
   }
 
   @Put('leave-types/:id')
@@ -66,7 +67,7 @@ export class SettingsController {
     @Param('id') id: string,
     @Body() body: { name?: string; status?: string },
   ) {
-    return this.service.updateLeaveType(user.tenantId, id, body);
+    return this.service.updateLeaveType(ctxFromUser(user), id, body);
   }
 
   @Delete('leave-types/:id')
@@ -74,17 +75,17 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.removeLeaveType(user.tenantId, id);
+    return this.service.removeLeaveType(ctxFromUser(user), id);
   }
 
   @Get()
   root(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Post()
@@ -92,22 +93,22 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Body() body: { key?: string; value?: string; status?: string },
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Patch(':id/soft-delete')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch(':id/restore')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get(':id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.get(user.tenantId, id);
+    return this.service.get(ctxFromUser(user), id);
   }
 
   @Put()
@@ -115,11 +116,11 @@ export class SettingsController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.update(user.tenantId, body);
+    return this.service.update(ctxFromUser(user), body);
   }
 
   @Delete(':id')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.remove(user.tenantId, id);
+    return this.service.remove(ctxFromUser(user), id);
   }
 }

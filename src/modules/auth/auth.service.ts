@@ -77,7 +77,7 @@ export class AuthService {
         permissions.add(rp.permission.code);
       }
     }
-    if (role === 'admin') {
+    if (role === 'superadmin') {
       const all = await this.prisma.permission.findMany();
       all.forEach((p) => permissions.add(p.code));
     }

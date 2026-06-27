@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { NotificationsService } from './notifications.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('notifications')
@@ -18,13 +19,13 @@ export class NotificationsController {
     @CurrentUser() user: RequestUser,
     @Body() body: { ids?: string[] },
   ) {
-    return this.service.markRead(user.tenantId, body.ids ?? []);
+    return this.service.markRead(ctxFromUser(user), body.ids ?? []);
   }
 
   @Post('mark-all-read')
   @Permissions('employees:write')
   markAllRead(@CurrentUser() user: RequestUser) {
-    return this.service.markAllRead(user.tenantId);
+    return this.service.markAllRead(ctxFromUser(user));
   }
 
   @Post()
@@ -33,44 +34,44 @@ export class NotificationsController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Get()
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('recent')
   recent(@CurrentUser() user: RequestUser) {
-    return this.service.listDetails(user.tenantId);
+    return this.service.listDetails(ctxFromUser(user));
   }
 
   @Get('trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Patch(':id/soft-delete')
   @Permissions('employees:write')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch(':id/restore')
   @Permissions('employees:write')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get(':id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.get(user.tenantId, id);
+    return this.service.get(ctxFromUser(user), id);
   }
 
   @Delete(':id')
   @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.remove(user.tenantId, id);
+    return this.service.remove(ctxFromUser(user), id);
   }
 }

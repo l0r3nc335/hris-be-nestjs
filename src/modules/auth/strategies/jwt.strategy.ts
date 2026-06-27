@@ -63,7 +63,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
-    if (user.role === 'admin') {
+    if (user.role === 'superadmin') {
       const allPerms = await this.prisma.permission.findMany();
       allPerms.forEach((p) => permissions.add(p.code));
     }

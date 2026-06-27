@@ -1,7 +1,32 @@
-import { PrismaClient } from '@prisma/client';
+// @ts-nocheck
 import * as bcrypt from 'bcrypt';
+import { createPrismaClient } from './prisma-client';
+import { generateOpaqueId } from '../src/common/utils/opaque-id';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
+
+const SEEDED_ROLE_SLUGS = [
+  'admin',
+  'manager',
+  'employee',
+  'hr_admin',
+  'hr_sys_admin',
+  'hr_payroll',
+  'hr_recruiter',
+  'executive',
+  'finance',
+] as const;
+
+const EXTRA_ROLES: { slug: string; name: string }[] = [
+  { slug: 'manager', name: 'Manager' },
+  { slug: 'employee', name: 'Employee' },
+  { slug: 'hr_admin', name: 'HR Admin' },
+  { slug: 'hr_sys_admin', name: 'HR System Admin' },
+  { slug: 'hr_payroll', name: 'HR Payroll' },
+  { slug: 'hr_recruiter', name: 'HR Recruiter' },
+  { slug: 'executive', name: 'Executive' },
+  { slug: 'finance', name: 'Finance' },
+];
 
 const SEED_COUNT = 200;
 const BATCH_SIZE = 100;
@@ -52,21 +77,21 @@ const PERMISSIONS = [
   'messages:read',
 ];
 
-async function batchCreateMany<T>(
-  buildRow: (index: number) => T,
-  createMany: (data: T[]) => Promise<{ count: number }>,
+async function batchCreateMany(
+  buildRow: (index: number) => Record<string, unknown>,
+  createMany: (data: Record<string, unknown>[]) => Promise<{ count: number }>,
   count = SEED_COUNT,
 ) {
   for (let start = 0; start < count; start += BATCH_SIZE) {
     const batch = Array.from(
       { length: Math.min(BATCH_SIZE, count - start) },
-      (_, j) => buildRow(start + j),
+      (_, j) => ({ ...buildRow(start + j), id: generateOpaqueId() }),
     );
     await createMany(batch);
   }
 }
 
-async function clearTenantData(tenantId: string, adminUserId: string) {
+async function clearTenantData(tenantId: string, preserveUserIds: string[]) {
   await prisma.message.deleteMany({ where: { tenantId } });
   await prisma.onboardingTask.deleteMany({ where: { tenantId } });
   await prisma.benefitPlan.deleteMany({ where: { tenantId } });
@@ -91,19 +116,19 @@ async function clearTenantData(tenantId: string, adminUserId: string) {
   await prisma.department.deleteMany({ where: { tenantId } });
   await prisma.auditLog.deleteMany({ where: { tenantId } });
 
-  const nonAdminRoles = await prisma.role.findMany({
-    where: { tenantId, slug: { not: 'admin' } },
+  const demoRoles = await prisma.role.findMany({
+    where: { tenantId, slug: { notIn: [...SEEDED_ROLE_SLUGS] } },
     select: { id: true },
   });
-  if (nonAdminRoles.length > 0) {
-    const roleIds = nonAdminRoles.map((r) => r.id);
+  if (demoRoles.length > 0) {
+    const roleIds = demoRoles.map((r) => r.id);
     await prisma.rolePermission.deleteMany({ where: { roleId: { in: roleIds } } });
     await prisma.userRole.deleteMany({ where: { roleId: { in: roleIds } } });
     await prisma.role.deleteMany({ where: { id: { in: roleIds } } });
   }
 
   const nonAdminUsers = await prisma.user.findMany({
-    where: { tenantId, id: { not: adminUserId } },
+    where: { tenantId, id: { notIn: preserveUserIds } },
     select: { id: true },
   });
   if (nonAdminUsers.length > 0) {
@@ -119,6 +144,7 @@ async function main() {
     where: { slug: 'acme' },
     update: {},
     create: {
+      id: generateOpaqueId(),
       name: 'Acme HRIS',
       slug: 'acme',
       status: 'active',
@@ -129,7 +155,7 @@ async function main() {
     await prisma.permission.upsert({
       where: { code },
       update: {},
-      create: { code, description: code },
+      create: { id: generateOpaqueId(), code, description: code },
     });
   }
 
@@ -137,14 +163,32 @@ async function main() {
     where: { tenantId_slug: { tenantId: tenant.id, slug: 'admin' } },
     update: {},
     create: {
+      id: generateOpaqueId(),
       tenantId: tenant.id,
       name: 'Administrator',
       slug: 'admin',
     },
   });
 
+  for (const { slug, name } of EXTRA_ROLES) {
+    await prisma.role.upsert({
+      where: { tenantId_slug: { tenantId: tenant.id, slug } },
+      update: {},
+      create: { id: generateOpaqueId(), tenantId: tenant.id, name, slug },
+    });
+  }
+
   const allPermissions = await prisma.permission.findMany();
-  for (const perm of allPermissions) {
+  const readPermissions = allPermissions.filter((p) => p.code.endsWith(':read'));
+
+  await prisma.rolePermission.deleteMany({
+    where: {
+      roleId: adminRole.id,
+      permissionId: { notIn: readPermissions.map((p) => p.id) },
+    },
+  });
+
+  for (const perm of readPermissions) {
     await prisma.rolePermission.upsert({
       where: {
         roleId_permissionId: {
@@ -158,17 +202,41 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash('password', 10);
-  const adminUser = await prisma.user.upsert({
+
+  const superadminUser = await prisma.user.upsert({
     where: {
-      tenantId_email: { tenantId: tenant.id, email: 'admin@hris.com' },
+      tenantId_email: { tenantId: tenant.id, email: 'superadmin@hris.com' },
     },
-    update: { passwordHash },
+    update: { passwordHash, role: 'superadmin' },
     create: {
+      id: generateOpaqueId(),
       tenantId: tenant.id,
-      email: 'admin@hris.com',
+      email: 'superadmin@hris.com',
+      passwordHash,
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: 'superadmin',
+      isActive: true,
+      emailVerified: true,
+    },
+  });
+
+  await prisma.user.deleteMany({
+    where: { tenantId: tenant.id, email: 'admin@hris.com' },
+  });
+
+  const admin1User = await prisma.user.upsert({
+    where: {
+      tenantId_email: { tenantId: tenant.id, email: 'admin1@hris.com' },
+    },
+    update: { passwordHash, role: 'admin' },
+    create: {
+      id: generateOpaqueId(),
+      tenantId: tenant.id,
+      email: 'admin1@hris.com',
       passwordHash,
       firstName: 'Admin',
-      lastName: 'User',
+      lastName: 'One',
       role: 'admin',
       isActive: true,
       emailVerified: true,
@@ -176,12 +244,41 @@ async function main() {
   });
 
   await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+    where: { userId_roleId: { userId: admin1User.id, roleId: adminRole.id } },
     update: {},
-    create: { userId: adminUser.id, roleId: adminRole.id },
+    create: { userId: admin1User.id, roleId: adminRole.id },
   });
 
-  await clearTenantData(tenant.id, adminUser.id);
+  const sampleUsers = await Promise.all(
+    ['user1', 'user2', 'user3'].map((name, index) =>
+      prisma.user.upsert({
+        where: {
+          tenantId_email: {
+            tenantId: tenant.id,
+            email: `${name}@hris.local`,
+          },
+        },
+        update: { passwordHash, role: 'user' },
+        create: {
+          id: generateOpaqueId(),
+          tenantId: tenant.id,
+          email: `${name}@hris.local`,
+          passwordHash,
+          firstName: 'User',
+          lastName: String(index + 1),
+          role: 'user',
+          isActive: true,
+          emailVerified: true,
+        },
+      }),
+    ),
+  );
+
+  await clearTenantData(tenant.id, [
+    superadminUser.id,
+    admin1User.id,
+    ...sampleUsers.map((u) => u.id),
+  ]);
 
   await batchCreateMany(
     (i) => ({
@@ -235,7 +332,7 @@ async function main() {
 
   await prisma.employee.update({
     where: { id: employees[0].id },
-    data: { userId: adminUser.id },
+    data: { userId: admin1User.id },
   });
 
   const managerId = employees[0].id;
@@ -275,7 +372,12 @@ async function main() {
     ['Annual Leave', 'Sick Leave', 'Personal Leave', 'Maternity Leave', 'Unpaid Leave'].map(
       (name) =>
         prisma.leaveType.create({
-          data: { tenantId: tenant.id, name, status: 'active' },
+          data: {
+            id: generateOpaqueId(),
+            tenantId: tenant.id,
+            name,
+            status: 'active',
+          },
         }),
     ),
   );
@@ -400,7 +502,7 @@ async function main() {
   await batchCreateMany(
     (i) => ({
       tenantId: tenant.id,
-      userId: adminUser.id,
+      userId: admin1User.id,
       title: `Notification ${i + 1}`,
       body: `Details for notification ${i + 1}`,
       status: 'active',
@@ -442,7 +544,7 @@ async function main() {
   await batchCreateMany(
     (i) => ({
       tenantId: tenant.id,
-      userId: adminUser.id,
+      userId: admin1User.id,
       from: `HR Team ${i + 1}`,
       subject: `Message ${i + 1}`,
       body: `Inbox message body ${i + 1}`,
@@ -477,6 +579,7 @@ async function main() {
   await Promise.all([
     prisma.companySetting.create({
       data: {
+        id: generateOpaqueId(),
         tenantId: tenant.id,
         key: 'companyName',
         value: 'Acme HRIS',
@@ -485,6 +588,7 @@ async function main() {
     }),
     prisma.companySetting.create({
       data: {
+        id: generateOpaqueId(),
         tenantId: tenant.id,
         key: 'timezone',
         value: 'UTC',
@@ -493,6 +597,7 @@ async function main() {
     }),
     prisma.companySetting.create({
       data: {
+        id: generateOpaqueId(),
         tenantId: tenant.id,
         key: 'currency',
         value: 'USD',
@@ -501,6 +606,7 @@ async function main() {
     }),
     prisma.companySetting.create({
       data: {
+        id: generateOpaqueId(),
         tenantId: tenant.id,
         key: 'fiscalYearStart',
         value: 'January',
@@ -509,6 +615,7 @@ async function main() {
     }),
     prisma.companySetting.create({
       data: {
+        id: generateOpaqueId(),
         tenantId: tenant.id,
         key: 'leavePolicy',
         value: 'Standard',
@@ -520,7 +627,7 @@ async function main() {
   await batchCreateMany(
     (i) => ({
       tenantId: tenant.id,
-      actorId: adminUser.id,
+      actorId: admin1User.id,
       action: i === SEED_COUNT - 1 ? 'seed.complete' : `seed.action.${i + 1}`,
       entity: 'system',
       entityId: tenant.id,
@@ -530,7 +637,10 @@ async function main() {
 
   console.log('Seed complete:', {
     tenantId: tenant.id,
-    adminEmail: 'admin@hris.com',
+    superadminEmail: 'superadmin@hris.com',
+    adminEmail: 'admin1@hris.com',
+    seededRoles: SEEDED_ROLE_SLUGS,
+    sampleUsers: sampleUsers.map((u) => u.email),
     password: 'password',
     seedCount: SEED_COUNT,
     departments: departments.length,

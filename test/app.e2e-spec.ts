@@ -82,7 +82,7 @@ describe('HRIS API (e2e)', () => {
       .post('/api/v1/auth/login')
       .set('Cookie', cookieHeader(cookies))
       .set('X-CSRF-Token', csrfToken)
-      .send({ email: 'admin@hris.com', password: 'password' });
+      .send({ email: 'admin1@hris.com', password: 'password' });
 
     if ([200, 201].includes(res.status)) {
       expect(res.body.data).toHaveProperty('user');

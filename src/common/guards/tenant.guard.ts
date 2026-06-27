@@ -34,7 +34,7 @@ export class TenantGuard implements CanActivate {
     if (
       headerTenant &&
       headerTenant !== user.tenantId &&
-      user.role !== 'super-admin'
+      user.role !== 'superadmin'
     ) {
       throw new AppException(
         ErrorCodes.TENANT_MISMATCH,

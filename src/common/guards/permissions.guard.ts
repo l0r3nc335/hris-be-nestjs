@@ -28,7 +28,7 @@ export class PermissionsGuard implements CanActivate {
       .getRequest<{ user?: RequestUser }>().user;
     if (!user) return false;
 
-    if (user.role === 'admin' || user.role === 'super-admin') {
+    if (user.role === 'superadmin') {
       return true;
     }
 

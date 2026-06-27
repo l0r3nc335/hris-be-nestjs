@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CompensationService } from './compensation.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('compensation')
@@ -14,12 +15,12 @@ export class CompensationController {
 
   @Get('compensation')
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('compensation/trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Post('compensation')
@@ -28,19 +29,19 @@ export class CompensationController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Patch('compensation/:id/soft-delete')
   @Permissions('payroll:run')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch('compensation/:id/restore')
   @Permissions('payroll:run')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get('compensation/:employeeId')
@@ -48,7 +49,7 @@ export class CompensationController {
     @CurrentUser() user: RequestUser,
     @Param('employeeId') employeeId: string,
   ) {
-    return this.service.byEmployee(user.tenantId, employeeId);
+    return this.service.byEmployee(ctxFromUser(user), employeeId);
   }
 
   @Put('compensation/:employeeId')
@@ -59,7 +60,7 @@ export class CompensationController {
     @Body() body: Record<string, unknown>,
   ) {
     void body;
-    return this.service.byEmployee(user.tenantId, employeeId);
+    return this.service.byEmployee(ctxFromUser(user), employeeId);
   }
 
   @Post('compensation/:employeeId/adjust')
@@ -69,23 +70,23 @@ export class CompensationController {
     @Param('employeeId') employeeId: string,
     @Body() body: Record<string, unknown>,
   ) {
-    return this.service.adjust(user.tenantId, employeeId, body);
+    return this.service.adjust(ctxFromUser(user), employeeId, body);
   }
 
   @Delete('compensation/:id')
   @Permissions('payroll:run')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.removeById(user.tenantId, id);
+    return this.service.removeById(ctxFromUser(user), id);
   }
 
   @Get('salary-structures')
   salaryStructures(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.salaryStructures(user.tenantId, query);
+    return this.service.salaryStructures(ctxFromUser(user), query);
   }
 
   @Get('salary-structures/trashed')
   listTrashedStructures(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashedStructures(user.tenantId, query);
+    return this.service.listTrashedStructures(ctxFromUser(user), query);
   }
 
   @Post('salary-structures')
@@ -94,7 +95,7 @@ export class CompensationController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.createStructure(user.tenantId, body);
+    return this.service.createStructure(ctxFromUser(user), body);
   }
 
   @Patch('salary-structures/:id/soft-delete')
@@ -103,7 +104,7 @@ export class CompensationController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.softDeleteStructure(user.tenantId, id);
+    return this.service.softDeleteStructure(ctxFromUser(user), id);
   }
 
   @Patch('salary-structures/:id/restore')
@@ -112,12 +113,12 @@ export class CompensationController {
     @CurrentUser() user: RequestUser,
     @Param('id') id: string,
   ) {
-    return this.service.restoreStructure(user.tenantId, id);
+    return this.service.restoreStructure(ctxFromUser(user), id);
   }
 
   @Get('salary-structures/:id')
   getStructure(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.getStructure(user.tenantId, id);
+    return this.service.getStructure(ctxFromUser(user), id);
   }
 
   @Put('salary-structures/:id')
@@ -128,12 +129,12 @@ export class CompensationController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.updateStructure(user.tenantId, id, body);
+    return this.service.updateStructure(ctxFromUser(user), id, body);
   }
 
   @Delete('salary-structures/:id')
   @Permissions('payroll:run')
   removeStructure(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.removeStructure(user.tenantId, id);
+    return this.service.removeStructure(ctxFromUser(user), id);
   }
 }

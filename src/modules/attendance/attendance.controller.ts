@@ -14,6 +14,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AttendanceService } from './attendance.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('attendance')
@@ -28,7 +29,7 @@ export class AttendanceController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.checkIn(user.tenantId, body);
+    return this.service.checkIn(ctxFromUser(user), body);
   }
 
   @Post('check-out')
@@ -37,12 +38,12 @@ export class AttendanceController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.checkOut(user.tenantId, body);
+    return this.service.checkOut(ctxFromUser(user), body);
   }
 
   @Get('today')
   today(@CurrentUser() user: RequestUser) {
-    return this.service.today(user.tenantId);
+    return this.service.today(ctxFromUser(user));
   }
 
   @Get('range')
@@ -51,7 +52,7 @@ export class AttendanceController {
     @Query('start') start?: string,
     @Query('end') end?: string,
   ) {
-    return this.service.range(user.tenantId, start, end);
+    return this.service.range(ctxFromUser(user), start, end);
   }
 
   @Get('summary/:employeeId')
@@ -59,29 +60,29 @@ export class AttendanceController {
     @CurrentUser() user: RequestUser,
     @Param('employeeId') employeeId: string,
   ) {
-    return this.service.summary(user.tenantId, employeeId);
+    return this.service.summary(ctxFromUser(user), employeeId);
   }
 
   @Get()
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Patch(':id/soft-delete')
   @Permissions('employees:write')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch(':id/restore')
   @Permissions('employees:write')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get(':employeeId')
@@ -89,12 +90,12 @@ export class AttendanceController {
     @CurrentUser() user: RequestUser,
     @Param('employeeId') employeeId: string,
   ) {
-    return this.service.byEmployee(user.tenantId, employeeId);
+    return this.service.byEmployee(ctxFromUser(user), employeeId);
   }
 
   @Get(':id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.get(user.tenantId, id);
+    return this.service.get(ctxFromUser(user), id);
   }
 
   @Post()
@@ -103,7 +104,7 @@ export class AttendanceController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Put(':id')
@@ -114,12 +115,12 @@ export class AttendanceController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.update(user.tenantId, id, body);
+    return this.service.update(ctxFromUser(user), id, body);
   }
 
   @Delete(':id')
   @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.remove(user.tenantId, id);
+    return this.service.remove(ctxFromUser(user), id);
   }
 }

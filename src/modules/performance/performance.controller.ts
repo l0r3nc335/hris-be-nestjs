@@ -11,6 +11,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PerformanceService } from './performance.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { ctxFromUser } from '../../common/helpers/tenant-context.helper';
 import { RequestUser } from '../../common/types/request-user';
 
 @ApiTags('performance')
@@ -21,12 +22,12 @@ export class PerformanceController {
 
   @Get('reviews')
   list(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.list(user.tenantId, query);
+    return this.service.list(ctxFromUser(user), query);
   }
 
   @Get('reviews/trashed')
   listTrashed(@CurrentUser() user: RequestUser, @Query() query: PaginationQueryDto) {
-    return this.service.listTrashed(user.tenantId, query);
+    return this.service.listTrashed(ctxFromUser(user), query);
   }
 
   @Get('ratings/:employeeId')
@@ -34,7 +35,7 @@ export class PerformanceController {
     @CurrentUser() user: RequestUser,
     @Param('employeeId') employeeId: string,
   ) {
-    return this.service.ratings(user.tenantId, employeeId);
+    return this.service.ratings(ctxFromUser(user), employeeId);
   }
 
   @Post('reviews')
@@ -43,36 +44,36 @@ export class PerformanceController {
     @CurrentUser() user: RequestUser,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.create(user.tenantId, body);
+    return this.service.create(ctxFromUser(user), body);
   }
 
   @Post('reviews/:id/submit')
   @Permissions('employees:write')
   submit(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.submit(user.tenantId, id);
+    return this.service.submit(ctxFromUser(user), id);
   }
 
   @Post('reviews/:id/approve')
   @Permissions('employees:write')
   approve(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.approve(user.tenantId, id);
+    return this.service.approve(ctxFromUser(user), id);
   }
 
   @Patch('reviews/:id/soft-delete')
   @Permissions('employees:write')
   softDelete(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.softDelete(user.tenantId, id);
+    return this.service.softDelete(ctxFromUser(user), id);
   }
 
   @Patch('reviews/:id/restore')
   @Permissions('employees:write')
   restore(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.restore(user.tenantId, id);
+    return this.service.restore(ctxFromUser(user), id);
   }
 
   @Get('reviews/:id')
   get(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.get(user.tenantId, id);
+    return this.service.get(ctxFromUser(user), id);
   }
 
   @Put('reviews/:id')
@@ -83,12 +84,12 @@ export class PerformanceController {
     @Param('id') id: string,
     @Body() body: Record<string, string>,
   ) {
-    return this.service.update(user.tenantId, id, body);
+    return this.service.update(ctxFromUser(user), id, body);
   }
 
   @Delete('reviews/:id')
   @Permissions('employees:write')
   remove(@CurrentUser() user: RequestUser, @Param('id') id: string) {
-    return this.service.remove(user.tenantId, id);
+    return this.service.remove(ctxFromUser(user), id);
   }
 }
